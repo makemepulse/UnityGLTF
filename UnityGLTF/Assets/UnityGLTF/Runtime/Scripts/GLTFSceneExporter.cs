@@ -467,23 +467,38 @@ namespace UnityGLTF
 			};
 		}
 
+		private NodeId CreateCameraNode( Camera unityCamera ){
+			Node camNode = new Node();
+			var id = new NodeId
+			{
+				Id = _root.Nodes.Count,
+				Root = _root
+			};
+			camNode.Rotation.Y = 1f;
+			_root.Nodes.Add(camNode);
+			camNode.Camera = ExportCamera(unityCamera);
+			return id;
+		}
+
+
 		private NodeId ExportNode(Transform nodeTransform)
 		{
 			var node = new Node();
+			node.SetUnityTransform(nodeTransform);
 
 			if (ExportNames)
 			{
 				node.Name = nodeTransform.name;
 			}
 
-			//export camera attached to node
+			// export camera attached to node
+			// Create additional sub node to flip camera Z
 			Camera unityCamera = nodeTransform.GetComponent<Camera>();
 			if (unityCamera != null)
 			{
-				node.Camera = ExportCamera(unityCamera);
+				node.Children.Add( CreateCameraNode( unityCamera ) );
 			}
 
-			node.SetUnityTransform(nodeTransform);
 
 			var id = new NodeId
 			{
