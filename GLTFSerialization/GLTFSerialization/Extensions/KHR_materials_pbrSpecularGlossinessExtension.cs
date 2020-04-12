@@ -15,7 +15,7 @@ namespace GLTF.Schema
 	public class KHR_materials_pbrSpecularGlossinessExtension : GLTFProperty, IExtension
 	{
 		public static readonly Vector3 SPEC_FACTOR_DEFAULT = new Vector3(0.2f, 0.2f, 0.2f);
-		public static readonly double GLOSS_FACTOR_DEFAULT = 0.5d; 
+		public static readonly double GLOSS_FACTOR_DEFAULT = 1d; 
 
 		/// <summary>
 		/// The RGBA components of the reflected diffuse color of the material. 
