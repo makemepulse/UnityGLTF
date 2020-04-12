@@ -491,14 +491,6 @@ namespace UnityGLTF
 				node.Name = nodeTransform.name;
 			}
 
-			// export camera attached to node
-			// Create additional sub node to flip camera Z
-			Camera unityCamera = nodeTransform.GetComponent<Camera>();
-			if (unityCamera != null)
-			{
-				node.Children.Add( CreateCameraNode( unityCamera ) );
-			}
-
 
 			var id = new NodeId
 			{
@@ -531,15 +523,23 @@ namespace UnityGLTF
 				}
 			}
 
+			// export camera attached to node
+			Camera unityCamera = nodeTransform.GetComponent<Camera>();
+  
 			// children that are not primitives get added as child nodes
-			if (nonPrimitives.Length > 0)
+			if (nonPrimitives.Length > 0 || unityCamera != null )
 			{
 				node.Children = new List<NodeId>(nonPrimitives.Length);
-				foreach (var child in nonPrimitives)
-				{
-					node.Children.Add(ExportNode(child.transform));
-				}
-			}
+      }
+			  // Create additional sub node to flip camera Z
+			if( unityCamera != null ){
+        node.Children.Add( CreateCameraNode( unityCamera ) );
+      }
+
+      foreach (var child in nonPrimitives)
+      {
+        node.Children.Add(ExportNode(child.transform));
+      }
 
 			return id;
 		}
