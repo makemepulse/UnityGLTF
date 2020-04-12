@@ -727,8 +727,8 @@ namespace UnityGLTF
 				Debug.LogError(string.Format("MeshFilter.sharedMesh on gameobject:{0} is missing , skipping", gameObject.name));
 				return null;
 			}
-
-			var renderer = gameObject.GetComponent<MeshRenderer>();
+      
+			var renderer = gameObject.GetComponent<Renderer>();
 			var materialsObj = renderer != null ? renderer.sharedMaterials : smr.sharedMaterials;
 
 			var prims = new MeshPrimitive[meshObj.subMeshCount];
