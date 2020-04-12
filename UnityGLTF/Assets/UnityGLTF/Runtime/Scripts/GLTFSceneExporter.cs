@@ -918,6 +918,10 @@ namespace UnityGLTF
 			{
 				material.PbrMetallicRoughness = ExportPBRMetallicRoughness(materialObj);
 			}
+			if (IsPBRSpecularGlossiness(materialObj))
+			{
+				ExportPBRSpecularGlossiness( material, materialObj );
+			}
 			else if (IsCommonConstant(materialObj))
 			{
 				material.CommonConstant = ExportCommonConstant(materialObj);
@@ -988,6 +992,11 @@ namespace UnityGLTF
 		private bool IsPBRMetallicRoughness(Material material)
 		{
 			return material.HasProperty("_Metallic") && material.HasProperty("_MetallicGlossMap");
+		}
+
+		private bool IsPBRSpecularGlossiness(Material material)
+		{
+			return material.HasProperty("_SpecColor") && material.HasProperty("_SpecGlossMap");
 		}
 
 		private bool IsCommonConstant(Material material)
@@ -1151,6 +1160,107 @@ namespace UnityGLTF
 			return pbr;
 		}
 
+		private void ExportPBRSpecularGlossiness(GLTFMaterial def, Material material){
+			const string extname = KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME;
+
+			if (_root.ExtensionsUsed == null)
+			{
+				_root.ExtensionsUsed = new List<string>(
+					new[] { extname }
+				);
+			}
+			else if (!_root.ExtensionsUsed.Contains(extname))
+			{
+				_root.ExtensionsUsed.Add(extname);
+			}
+
+			if (RequireExtensions)
+			{
+				if (_root.ExtensionsRequired == null)
+				{
+					_root.ExtensionsRequired = new List<string>(
+						new[] { extname }
+					);
+				}
+				else if (!_root.ExtensionsRequired.Contains(extname))
+				{
+					_root.ExtensionsRequired.Add(extname);
+				}
+			}
+
+			if (def.Extensions == null)
+				def.Extensions = new Dictionary<string, IExtension>();
+
+
+			GLTF.Math.Color baseColor = GLTF.Math.Color.Black;
+			if (material.HasProperty("_Color"))
+			{
+				baseColor = material.GetColor("_Color").ToNumericsColorRaw();
+			}
+
+			GLTF.Math.Vector3 specColor = GLTF.Math.Vector3.One;
+			if (material.HasProperty("_SpecColor"))
+			{
+				var specProperty = material.GetColor("_SpecColor");
+				specColor.X = specProperty.r;
+				specColor.Y = specProperty.g;
+				specColor.Z = specProperty.b;
+			}
+			
+
+			double glossFactor = 1d;
+			if (material.HasProperty("_Glossiness"))
+			{
+				glossFactor = material.GetFloat("_Glossiness");
+			}
+
+
+			TextureInfo colorTexture = null;
+			var albedoTex = material.GetTexture("_MainTex");
+			if (albedoTex != null)
+			{
+				if(albedoTex is Texture2D)
+				{
+					colorTexture = ExportTextureInfo(albedoTex, TextureMapType.SpecGloss);
+					ExportTextureTransform(colorTexture, material, "_MainTex");
+				}
+				else
+				{
+					Debug.LogErrorFormat("Can't export a {0} color texture texture in material {1}", albedoTex.GetType(), material.name);
+				}
+			}
+			
+
+			TextureInfo specGlossTexture = null;
+			var sgTex = material.GetTexture("_SpecGlossMap");
+			if (sgTex != null)
+			{
+				if(sgTex is Texture2D)
+				{
+					
+					if( Array.Exists( material.shaderKeywords, (string s)=>s=="_SMOOTHNESS_TEXTURE_ALBEDO_CH" ) ){
+						Debug.LogWarning("Specular setup - glossiness in albedo alpha not supported");
+					}
+
+					specGlossTexture = ExportTextureInfo(sgTex, TextureMapType.SpecGloss);
+					ExportTextureTransform(specGlossTexture, material, "_SpecGlossMap");
+				}
+				else
+				{
+					Debug.LogErrorFormat("Can't export a {0} specular glossiness texture in material {1}", sgTex.GetType(), material.name);
+				}
+			}
+			
+
+			def.Extensions[extname] = new KHR_materials_pbrSpecularGlossinessExtension(
+				baseColor, 
+				colorTexture, 
+				specColor,
+				glossFactor,
+				specGlossTexture
+			);
+		}
+
 		private MaterialCommonConstant ExportCommonConstant(Material materialObj)
 		{
 			if (_root.ExtensionsUsed == null)
@@ -1232,13 +1342,14 @@ namespace UnityGLTF
 			}
 
 			if (_shouldUseInternalBufferForImages)
-		    	{
+			{
 				texture.Source = ExportImageInternalBuffer(textureObj, textureMapType);
-		    	}
-		    	else
-		    	{
+			}
+			else
+			{
 				texture.Source = ExportImage(textureObj, textureMapType);
-		    	}
+			}
+
 			texture.Sampler = ExportSampler(textureObj);
 
 			_textures.Add(textureObj);
