@@ -1160,6 +1160,11 @@ namespace UnityGLTF
 			return pbr;
 		}
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
 		private void ExportPBRSpecularGlossiness(GLTFMaterial def, Material material){
 			const string extname = KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME;
 
@@ -1198,6 +1203,7 @@ namespace UnityGLTF
 				baseColor = material.GetColor("_Color").ToNumericsColorRaw();
 			}
 
+<<<<<<< Updated upstream
 			GLTF.Math.Vector3 specColor = GLTF.Math.Vector3.One;
 			if (material.HasProperty("_SpecColor"))
 			{
@@ -1212,6 +1218,14 @@ namespace UnityGLTF
 			if (material.HasProperty("_Glossiness"))
 			{
 				glossFactor = material.GetFloat("_Glossiness");
+=======
+			
+
+			double glossFactor = 1d;
+			if (material.HasProperty("_GlossMapScale"))
+			{
+				glossFactor = material.GetFloat("_GlossMapScale");
+>>>>>>> Stashed changes
 			}
 
 
@@ -1232,6 +1246,11 @@ namespace UnityGLTF
 			
 
 			TextureInfo specGlossTexture = null;
+<<<<<<< Updated upstream
+=======
+			GLTF.Math.Vector3 specColor = GLTF.Math.Vector3.One;
+
+>>>>>>> Stashed changes
 			var sgTex = material.GetTexture("_SpecGlossMap");
 			if (sgTex != null)
 			{
@@ -1249,6 +1268,18 @@ namespace UnityGLTF
 				{
 					Debug.LogErrorFormat("Can't export a {0} specular glossiness texture in material {1}", sgTex.GetType(), material.name);
 				}
+<<<<<<< Updated upstream
+=======
+			} else {
+
+				if (material.HasProperty("_SpecColor"))
+				{
+					var specProperty = material.GetColor("_SpecColor");
+					specColor.X = specProperty.r;
+					specColor.Y = specProperty.g;
+					specColor.Z = specProperty.b;
+				}
+>>>>>>> Stashed changes
 			}
 			
 
@@ -1261,6 +1292,10 @@ namespace UnityGLTF
 			);
 		}
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 		private MaterialCommonConstant ExportCommonConstant(Material materialObj)
 		{
 			if (_root.ExtensionsUsed == null)
