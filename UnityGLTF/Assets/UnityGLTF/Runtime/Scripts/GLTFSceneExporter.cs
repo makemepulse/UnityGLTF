@@ -497,21 +497,24 @@ namespace UnityGLTF
 			FilterPrimitives(nodeTransform, out primitives, out nonPrimitives);
 			if (primitives.Length > 0)
 			{
-				node.Mesh = ExportMesh(nodeTransform.name, primitives);
+				var mesh = ExportMesh(nodeTransform.name, primitives);
+				if( mesh != null ){
+					node.Mesh = mesh;
 
-				// associate unity meshes with gltf mesh id
-				foreach (var prim in primitives)
-				{
-					var smr = prim.GetComponent<SkinnedMeshRenderer>();
-					if (smr != null)
+					// associate unity meshes with gltf mesh id
+					foreach (var prim in primitives)
 					{
-						_primOwner[new PrimKey { Mesh = smr.sharedMesh, Material = smr.sharedMaterial }] = node.Mesh;
-					}
-					else
-					{
-						var filter = prim.GetComponent<MeshFilter>();
-						var renderer = prim.GetComponent<MeshRenderer>();
-						_primOwner[new PrimKey { Mesh = filter.sharedMesh, Material = renderer.sharedMaterial }] = node.Mesh;
+						var smr = prim.GetComponent<SkinnedMeshRenderer>();
+						if (smr != null)
+						{
+							_primOwner[new PrimKey { Mesh = smr.sharedMesh, Material = smr.sharedMaterial }] = node.Mesh;
+						}
+						else
+						{
+							var filter = prim.GetComponent<MeshFilter>();
+							var renderer = prim.GetComponent<MeshRenderer>();
+							_primOwner[new PrimKey { Mesh = filter.sharedMesh, Material = renderer.sharedMaterial }] = node.Mesh;
+						}
 					}
 				}
 			}
@@ -697,6 +700,11 @@ namespace UnityGLTF
 				}
 			}
 			
+			// Don't export meshes without primitives, since it's not valid
+			if( mesh.Primitives.Count == 0){
+				return null;
+			}
+
 			var id = new MeshId
 			{
 				Id = _root.Meshes.Count,
