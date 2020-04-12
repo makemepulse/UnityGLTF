@@ -110,6 +110,7 @@ namespace GLTF.Schema
 
 		override public void Serialize(JsonWriter writer)
 		{
+			writer.WritePropertyName(KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME);
 			writer.WriteStartObject();
 
 			if (DiffuseFactor != Color.White)
@@ -119,6 +120,7 @@ namespace GLTF.Schema
 				writer.WriteValue(DiffuseFactor.R);
 				writer.WriteValue(DiffuseFactor.G);
 				writer.WriteValue(DiffuseFactor.B);
+				writer.WriteValue(DiffuseFactor.A);
 				writer.WriteEndArray();
 			}
 
@@ -158,9 +160,9 @@ namespace GLTF.Schema
 
 		public JProperty Serialize()
 		{
-      JProperty jProperty = new JProperty(KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME);
-      Serialize( jProperty.CreateWriter() );
-			return jProperty;
+			JTokenWriter writer = new JTokenWriter();
+			Serialize(writer);
+			return (JProperty)writer.Token;
 		}
 
 	}
