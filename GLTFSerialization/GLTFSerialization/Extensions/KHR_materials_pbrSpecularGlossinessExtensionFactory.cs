@@ -22,11 +22,8 @@ namespace GLTF.Schema
 
 		public override IExtension Deserialize(GLTFRoot root, JProperty extensionToken)
 		{
-			Color diffuseFactor = Color.White;
-			TextureInfo diffuseTextureInfo = new TextureInfo();
-			Vector3 specularFactor = KHR_materials_pbrSpecularGlossinessExtension.SPEC_FACTOR_DEFAULT;
-			double glossinessFactor = KHR_materials_pbrSpecularGlossinessExtension.GLOSS_FACTOR_DEFAULT;
-			TextureInfo specularGlossinessTextureInfo = new TextureInfo();
+
+      var extension = new KHR_materials_pbrSpecularGlossinessExtension();
 
 			if (extensionToken != null)
 			{
@@ -35,17 +32,34 @@ namespace GLTF.Schema
 				System.Diagnostics.Debug.WriteLine(extensionToken.Value.ToString());
 				System.Diagnostics.Debug.WriteLine(extensionToken.Value.Type);
 #endif
+
 				JToken diffuseFactorToken = extensionToken.Value[DIFFUSE_FACTOR];
-				diffuseFactor = diffuseFactorToken != null ? diffuseFactorToken.DeserializeAsColor() : diffuseFactor;
-				diffuseTextureInfo = extensionToken.Value[DIFFUSE_TEXTURE].DeserializeAsTexture(root);
+        if( diffuseFactorToken != null ){
+          extension.DiffuseFactor = diffuseFactorToken.DeserializeAsColor();
+        }
+        
+        JToken diffuseTextureToken = extensionToken.Value[DIFFUSE_TEXTURE];
+        if( diffuseTextureToken != null ){
+          extension.DiffuseTexture = diffuseTextureToken.DeserializeAsTexture(root);
+        }
+
 				JToken specularFactorToken = extensionToken.Value[SPECULAR_FACTOR];
-				specularFactor = specularFactorToken != null ? specularFactorToken.DeserializeAsVector3() : specularFactor;
+        if( specularFactorToken != null ){
+          extension.SpecularFactor = specularFactorToken.DeserializeAsVector3();
+        }
+
 				JToken glossinessFactorToken = extensionToken.Value[GLOSSINESS_FACTOR];
-				glossinessFactor = glossinessFactorToken != null ? glossinessFactorToken.DeserializeAsDouble() : glossinessFactor;
-				specularGlossinessTextureInfo = extensionToken.Value[SPECULAR_GLOSSINESS_TEXTURE].DeserializeAsTexture(root);
+        if( glossinessFactorToken != null ){
+          extension.GlossinessFactor = glossinessFactorToken.DeserializeAsDouble();
+        }
+
+        JToken specGlossTextureToken = extensionToken.Value[SPECULAR_GLOSSINESS_TEXTURE];
+        if( specGlossTextureToken != null ){
+          extension.SpecularGlossinessTexture = specGlossTextureToken.DeserializeAsTexture(root);
+        }
 			}
 
-			return new KHR_materials_pbrSpecularGlossinessExtension(diffuseFactor, diffuseTextureInfo, specularFactor, glossinessFactor, specularGlossinessTextureInfo);
+			return extension;
 		}
 	}
 }
