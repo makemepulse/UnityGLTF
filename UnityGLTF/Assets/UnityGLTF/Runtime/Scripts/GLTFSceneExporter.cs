@@ -1159,12 +1159,7 @@ namespace UnityGLTF
 
 			return pbr;
 		}
-
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
+		
 		private void ExportPBRSpecularGlossiness(GLTFMaterial def, Material material){
 			const string extname = KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME;
 
