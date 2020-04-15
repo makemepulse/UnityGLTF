@@ -287,9 +287,18 @@ namespace GLTF.Schema.KHR_lights_punctual
 
 		public JProperty Serialize()
 		{
+
+			JTokenWriter writer = new JTokenWriter();
+      writer.WriteStartArray();
+      for (int i = 0; i < Lights.Count; i++)
+      {
+          Lights[i].Serialize( writer );
+      }
+      writer.WriteEndArray();
+			
 			return new JProperty(KHR_lights_punctualExtensionFactory.EXTENSION_NAME,
 				new JObject(
-					new JProperty(KHR_lights_punctualExtensionFactory.PNAME_LIGHTS, new JArray(Lights))
+					new JProperty(KHR_lights_punctualExtensionFactory.PNAME_LIGHTS, writer.Token )
 				)
 			);
 

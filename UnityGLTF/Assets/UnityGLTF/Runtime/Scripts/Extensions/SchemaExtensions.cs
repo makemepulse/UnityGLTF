@@ -60,11 +60,15 @@ namespace UnityGLTF.Extensions
 		/// </summary>
 		/// <param name="node">gltf node to modify</param>
 		/// <param name="transform">unity transform to convert</param>
-		public static void SetUnityTransform(this Node node, Transform transform)
+		public static void SetUnityTransform(this Node node, Transform transform, bool useLocal=true)
 		{
-			node.Translation = transform.localPosition.ToGltfVector3Convert();
-			node.Rotation = transform.localRotation.ToGltfQuaternionConvert();
-			node.Scale = transform.localScale.ToGltfVector3Raw();
+			Vector3    position = useLocal ? transform.localPosition : transform.position  ;
+			Quaternion rotation = useLocal ? transform.localRotation : transform.rotation  ;
+			Vector3    scale    = useLocal ? transform.localScale    : transform.lossyScale;
+
+			node.Translation = position.ToGltfVector3Convert();
+			node.Rotation 	 = rotation.ToGltfQuaternionConvert();
+			node.Scale       = scale.ToGltfVector3Raw();
 		}
 
 		// todo: move to utility class
@@ -161,6 +165,15 @@ namespace UnityGLTF.Extensions
 			Vector3 toAxisOfRotation = axisFlipScale * Vector3.Scale(fromAxisOfRotation, CoordinateSpaceConversionScale.ToUnityVector3Raw());
 
 			return new GLTF.Math.Quaternion(toAxisOfRotation.x, toAxisOfRotation.y, toAxisOfRotation.z, unityQuat.w);
+		}
+
+		public static Vector4 ToGltfQuaternionConvert(this Vector4 unityQuat)
+		{
+			Vector3 fromAxisOfRotation = new Vector3(unityQuat.x, unityQuat.y, unityQuat.z);
+			float axisFlipScale = CoordinateSpaceConversionRequiresHandednessFlip ? -1.0f : 1.0f;
+			Vector3 toAxisOfRotation = axisFlipScale * Vector3.Scale(fromAxisOfRotation, CoordinateSpaceConversionScale.ToUnityVector3Raw());
+
+			return new Vector4(toAxisOfRotation.x, toAxisOfRotation.y, toAxisOfRotation.z, unityQuat.w);
 		}
 
 		/// <summary>
@@ -468,6 +481,24 @@ namespace UnityGLTF.Extensions
 				returnArray[i].y = array[i].y * coordinateSpaceCoordinateScale.Y;
 				returnArray[i].z = array[i].z * coordinateSpaceCoordinateScale.Z;
 				returnArray[i].w = array[i].w * coordinateSpaceCoordinateScale.W;
+			}
+
+			return returnArray;
+		}
+
+
+				/// <summary>
+		/// Converts and copies based on the specified coordinate scale
+		/// </summary>
+		/// <param name="array">The array to convert and copy</param>
+		/// <returns>The copied and converted coordinate space</returns>
+		public static Vector4[] ConvertQuaternionsCoordinateSpaceAndCopy(Vector4[] array)
+		{
+			var returnArray = new Vector4[array.Length];
+
+			for (var i = 0; i < array.Length; i++)
+			{
+				returnArray[i] = array[i].ToGltfQuaternionConvert();
 			}
 
 			return returnArray;

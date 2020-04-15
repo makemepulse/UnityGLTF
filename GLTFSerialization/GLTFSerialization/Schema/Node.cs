@@ -124,6 +124,13 @@ namespace GLTF.Schema
 			}
 		}
 
+    public void AddChild( NodeId childId ){
+      if( Children == null ) {
+        Children = new List<NodeId>();
+      }
+      Children.Add( childId );
+    }
+
 		public static Node Deserialize(GLTFRoot root, JsonReader reader)
 		{
 			var node = new Node();
