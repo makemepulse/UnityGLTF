@@ -14,10 +14,28 @@ using WrapMode = GLTF.Schema.WrapMode;
 
 namespace UnityGLTF
 {
+
+	[Serializable]
+	public class MeshExportOptions
+	{
+
+		public bool exportNormals = true;
+		public bool exportTangents = true;
+		public bool exportUv0 = true;
+		public bool exportUv1 = true;
+		public bool exportUv2 = true;
+		public bool exportUv3 = true;
+		public bool exportColor = true;
+
+	}
+
 	public class ExportOptions
 	{
 		public GLTFSceneExporter.RetrieveTexturePathDelegate TexturePathRetriever = (texture) => texture.name;
 		public bool ExportInactivePrimitives = true;
+
+		public bool exportGlb = false;
+		public bool embedTextures = false;
 	}
 
 	public partial class GLTFSceneExporter
@@ -336,7 +354,10 @@ namespace UnityGLTF
 			scene.Nodes = new List<NodeId>(rootObjTransforms.Length);
 			foreach (var transform in rootObjTransforms)
 			{
-				scene.Nodes.Add(ExportNode(transform));
+        NodeId nodeid = ExportNode(transform);
+				if( nodeid != null ) {
+          scene.Nodes.Add( nodeid );
+        }
 			}
 
 
@@ -356,6 +377,9 @@ namespace UnityGLTF
 			};
 		}
 
+		private bool IsEnabledNode( Transform nodeTransform ){
+			return nodeTransform.gameObject.activeSelf;
+		}
 
 		private bool IsAnimatedNode( Transform nodeTransform ){
 			return (nodeTransform.GetComponent<UnityEngine.Animation>() || nodeTransform.GetComponent<UnityEngine.Animator>());
@@ -368,7 +392,7 @@ namespace UnityGLTF
 	
 		private bool IsLightNode( Transform nodeTransform ){
 			var light = nodeTransform.GetComponent<Light>();
-			return( light != null && (
+			return( light != null && light.enabled && (
 				light.type == UnityEngine.LightType.Directional ||
 				light.type == UnityEngine.LightType.Spot ||
 				light.type == UnityEngine.LightType.Point
@@ -377,6 +401,9 @@ namespace UnityGLTF
 
 		private NodeId ExportNode(Transform nodeTransform)
 		{
+
+      if( ! IsEnabledNode(nodeTransform) ) return null;
+
 			var node = new Node();
 
 			if (ExportNames)
@@ -440,7 +467,10 @@ namespace UnityGLTF
 
       foreach (var child in nonPrimitives)
       {
-        node.AddChild(ExportNode(child.transform));
+        NodeId nodeid = ExportNode(child.transform);
+				if( nodeid != null ) {
+          node.AddChild( nodeid );
+        }
       }
 
 			return id;
@@ -553,10 +583,11 @@ namespace UnityGLTF
 			};
 			subNode.Rotation = new GLTF.Math.Quaternion(0f, 1f, 0f, 0f);
 			_root.Nodes.Add(subNode);
-
+			
+			
 			var extEntry = new PunctualLight(){
-				Color = unityLight.color.ToNumericsColorRaw(),
-				Intensity = unityLight.intensity,
+				Color = unityLight.color.ToNumericsColorLinear(),
+				Intensity = unityLight.intensity*unityLight.intensity,
 				Name = unityLight.name,
 				Range = unityLight.range,
 				Type = GetGLTFLightType( unityLight ),
@@ -564,8 +595,8 @@ namespace UnityGLTF
 
 			if( unityLight.type == UnityEngine.LightType.Spot ){
 				extEntry.Spot = new Spot(){
-					InnerConeAngle = unityLight.innerSpotAngle * Mathf.Deg2Rad,
-					OuterConeAngle = unityLight.spotAngle * Mathf.Deg2Rad
+					InnerConeAngle = unityLight.innerSpotAngle * Mathf.Deg2Rad * .5f,
+					OuterConeAngle = unityLight.spotAngle * Mathf.Deg2Rad * .5f
 				};
 			}
 

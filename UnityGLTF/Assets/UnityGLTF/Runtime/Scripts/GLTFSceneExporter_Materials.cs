@@ -218,7 +218,7 @@ namespace UnityGLTF
 
 			if (material.HasProperty("_Color"))
 			{
-				pbr.BaseColorFactor = material.GetColor("_Color").ToNumericsColorRaw();
+				pbr.BaseColorFactor = material.GetColor("_Color").ToNumericsColorLinear();
 			}
 
 			if (material.HasProperty("_MainTex"))
@@ -297,15 +297,11 @@ namespace UnityGLTF
 			GLTF.Math.Color baseColor = GLTF.Math.Color.Black;
 			if (material.HasProperty("_Color"))
 			{
-				baseColor = material.GetColor("_Color").ToNumericsColorRaw();
+				baseColor = material.GetColor("_Color").ToNumericsColorLinear();
 			}
 
 
-			double glossFactor = 1d;
-			if (material.HasProperty("_GlossMapScale"))
-			{
-				glossFactor = material.GetFloat("_GlossMapScale");
-			}
+
 
 
 			TextureInfo colorTexture = null;
@@ -327,12 +323,19 @@ namespace UnityGLTF
 			TextureInfo specGlossTexture = null;
 			GLTF.Math.Vector3 specColor = GLTF.Math.Vector3.One;
 
+			double glossFactor = 1d;
+
+      
 			var sgTex = material.GetTexture("_SpecGlossMap");
 			if (sgTex != null)
 			{
 				if(sgTex is Texture2D)
 				{
-					
+					if (material.HasProperty("_GlossMapScale"))
+          {
+            glossFactor = material.GetFloat("_GlossMapScale");
+          }
+
 					if( Array.Exists( material.shaderKeywords, (string s)=>s=="_SMOOTHNESS_TEXTURE_ALBEDO_CH" ) ){
 						Debug.LogWarning("Specular setup - glossiness in albedo alpha not supported");
 					}
@@ -348,7 +351,12 @@ namespace UnityGLTF
 
 				if (material.HasProperty("_SpecColor"))
 				{
-					var specProperty = material.GetColor("_SpecColor");
+          if (material.HasProperty("_Glossiness"))
+          {
+            glossFactor = material.GetFloat("_Glossiness");
+          }
+
+					var specProperty = material.GetColor("_SpecColor").linear;
 					specColor.X = specProperty.r;
 					specColor.Y = specProperty.g;
 					specColor.Z = specProperty.b;

@@ -343,6 +343,12 @@ namespace UnityGLTF.Extensions
 			return new GLTF.Math.Color(color.r, color.g, color.b, color.a);
 		}
 
+		public static GLTF.Math.Color ToNumericsColorLinear(this UnityEngine.Color color)
+		{
+			var lc = color.linear;
+			return new GLTF.Math.Color(lc.r, lc.g, lc.b, lc.a);
+		}
+
 		public static UnityEngine.Color[] ToUnityColorRaw(this GLTF.Math.Color[] inColorArr)
 		{
 			UnityEngine.Color[] outColorArr = new UnityEngine.Color[inColorArr.Length];

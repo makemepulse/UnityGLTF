@@ -172,7 +172,6 @@ namespace UnityGLTF
 		private MeshPrimitive[] ExportPrimitive(GameObject gameObject, GLTFMesh mesh)
 		{
 			Mesh meshObj = GetObjectMesh(gameObject);
-			SkinnedMeshRenderer smr = null;
 
 			if (meshObj == null)
 			{
@@ -268,7 +267,7 @@ namespace UnityGLTF
 					primitive.Material = lastMaterialId;
 				}
 
-				ExportBlendShapes(smr, meshObj, primitive, mesh);
+				ExportBlendShapes( meshObj, primitive, mesh);
 
 				prims[submesh] = primitive;
 			}
@@ -325,9 +324,9 @@ namespace UnityGLTF
 		// Blend Shapes / Morph Targets
 		// Adopted from Gary Hsu (bghgary)
 		// https://github.com/bghgary/glTF-Tools-for-Unity/blob/master/UnityProject/Assets/Gltf/Editor/Exporter.cs
-		private void ExportBlendShapes(SkinnedMeshRenderer smr, Mesh meshObj, MeshPrimitive primitive, GLTFMesh mesh)
+		private void ExportBlendShapes(Mesh meshObj, MeshPrimitive primitive, GLTFMesh mesh)
 		{
-			if (smr != null && meshObj.blendShapeCount > 0)
+			if (meshObj.blendShapeCount > 0)
 			{
 				List<Dictionary<string, AccessorId>> targets = new List<Dictionary<string, AccessorId>>(meshObj.blendShapeCount);
 				List<Double> weights = new List<double>(meshObj.blendShapeCount);
@@ -363,7 +362,12 @@ namespace UnityGLTF
 					// to the values in this frame) and then any weight between 50-100 would be relevant to the weights in
 					// the second frame.  See Post 20 for more info:
 					// https://forum.unity3d.com/threads/is-there-some-method-to-add-blendshape-in-editor.298002/#post-2015679
-					weights.Add(smr.GetBlendShapeWeight(blendShapeIndex) / 100);
+
+          // the weight info comming from SkinnedMeshRenderer should be set on Node.weights instead of Mesh.weights
+          // there is no such Mesh.weights data in unity so it will always be all 0
+
+					// weights.Add(smr.GetBlendShapeWeight(blendShapeIndex) / 100);
+					weights.Add(0.0);
 				}
 
 				mesh.Weights = weights;

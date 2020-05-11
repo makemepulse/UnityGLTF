@@ -44,7 +44,7 @@
 				float4 col = tex2D(_MainTex, i.uv);
 				// If a texture is marked as a normal map
 				// the values are stored in the A and G channel.
-				return float4(col.a, col.g, 1, 1);
+				return float4(UnpackNormal(col)/2.0 + .5, 1.0);
 			}
 			ENDCG
 		}
