@@ -32,7 +32,7 @@ public class GLTFExportMenu : EditorWindow
     }
 
     [MenuItem("GLTF/Export Selected")]
-	static void ExportSelected()
+	public static void ExportSelected()
 	{
 		string name;
 		if (Selection.transforms.Length > 1)
