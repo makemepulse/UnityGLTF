@@ -60,9 +60,6 @@ namespace UnityGLTF
       GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
 
       GLTFExportTextureSettings setting = reg.GetSettings(source);
-      if (setting == null){
-        setting = GLTFExportSettings.Defaults.info.TextureSettingsDefaults;
-      }
 
       if (!setting.Compress)
         return;

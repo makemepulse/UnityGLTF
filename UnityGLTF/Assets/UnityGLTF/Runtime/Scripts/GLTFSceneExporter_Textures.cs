@@ -233,7 +233,7 @@ namespace UnityGLTF
 			// ================
       GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
       GLTFExportTextureSettings setting = reg.GetSettings(textureObj as Texture2D);
-      if (setting != null && setting.Compress)
+      if (setting.Compress)
       {
 
         JObject extra = texture.Source.Value.Extras as JObject;

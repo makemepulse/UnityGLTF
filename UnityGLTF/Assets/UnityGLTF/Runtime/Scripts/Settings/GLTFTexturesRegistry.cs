@@ -55,7 +55,7 @@ public class GLTFTexturesRegistry
 
     GLTFTextureSettingsBinding bin = GetBinding(texture);
     if (bin == null)
-      return null;
+      return GLTFExportSettings.Defaults.info.TextureSettingsDefaults;
     return bin.settings;
 
   }
