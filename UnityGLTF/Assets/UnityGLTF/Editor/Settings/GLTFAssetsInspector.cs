@@ -1,68 +1,163 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityGLTF;
 
-public class GLTFAssetsInspector : EditorWindow {
-  string myString = "Hello World";
-  bool groupEnabled;
-  bool myBool = true;
-  float myFloat = 1.23f;
+public class GLTFAssetsInspector : EditorWindow
+{
 
   Vector2 scrollView;
 
   // Add menu named "My Window" to the Window menu
-  [MenuItem ("GLTF/Assets Inspector")]
-  static void Init () {
+  [MenuItem("GLTF/Assets Inspector")]
+  static void Init()
+  {
     // Get existing open window or if none, make a new one:
-    GLTFAssetsInspector window = (GLTFAssetsInspector) EditorWindow.GetWindow (typeof (GLTFAssetsInspector));
-    window.Show ();
+    GLTFAssetsInspector window = (GLTFAssetsInspector)EditorWindow.GetWindow(typeof(GLTFAssetsInspector));
+    window.Show();
   }
 
-  void OnGUI () {
-    GUILayout.Label ("Base Settings", EditorStyles.boldLabel);
-    myString = EditorGUILayout.TextField ("Text Field", myString);
+  void AddMaterialTextures(ref List<Texture2D> textures, Material material)
+  {
+    if (material == null)
+      return;
+    Shader shader = material.shader;
+    for (int i = 0; i < ShaderUtil.GetPropertyCount(shader); i++)
+    {
+      if (ShaderUtil.GetPropertyType(shader, i) == ShaderUtil.ShaderPropertyType.TexEnv)
+      {
+        Texture2D texture = material.GetTexture(ShaderUtil.GetPropertyName(shader, i)) as Texture2D;
+        if (textures.IndexOf(texture) == -1 && texture != null)
+        {
+          textures.Add(texture);
+        }
+      }
+    }
+  }
 
-    groupEnabled = EditorGUILayout.BeginToggleGroup ("Optional Settings", groupEnabled);
-    myBool = EditorGUILayout.Toggle ("Toggle", myBool);
-    myFloat = EditorGUILayout.Slider ("Slider", myFloat, -3, 3);
-    EditorGUILayout.EndToggleGroup ();
+  void OnGUI()
+  {
 
-    var textures = Selection.GetFiltered<Texture2D> (SelectionMode.Assets);
-    scrollView = GUILayout.BeginScrollView (scrollView);
-    GUILayout.Label ("Selected Textures", EditorStyles.boldLabel);
-    foreach (var texture in textures) {
-      EditorGUILayout.InspectorTitlebar (true, texture);
-      DrawInspector (texture);
+    var gameObjects = Selection.GetFiltered<GameObject>(SelectionMode.Editable);
+    var gltfSettings = Selection.GetFiltered<GLTFExportSettings>(SelectionMode.Assets);
+    scrollView = GUILayout.BeginScrollView(scrollView);
+
+
+    if (gltfSettings.Length > 0)
+    {
+      EditorGUILayout.InspectorTitlebar(true, gltfSettings[0]);
+      var so = new SerializedObject(gltfSettings);
+      EditorGUILayout.PropertyField(so.FindProperty("m_info"), new GUIContent("Edit Settings"));
+      so.ApplyModifiedProperties();
+      GUILayout.Space(10);
     }
 
-    GUILayout.EndScrollView ();
-    Repaint ();
+
+    List<Texture2D> textures = new List<Texture2D>();
+
+    // GAME OBJECTS
+    // =========
+    if (gameObjects.Length > 0)
+    {
+      GUILayout.Label("Selected GameObject", EditorStyles.boldLabel);
+
+      foreach (var gameObject in gameObjects)
+      {
+        EditorGUILayout.InspectorTitlebar(true, gameObject);
+        Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+          foreach (Material material in renderers[i].sharedMaterials)
+          {
+            AddMaterialTextures(ref textures, material);
+          }
+        }
+        if (GUILayout.Button("Export GLTF"))
+        {
+          GLTFExportMenu.ExportSelected();
+        }
+        GUILayout.Space(10);
+      }
+    }
+
+    // TEXTURES
+    // =========
+    var selectedTextures = Selection.GetFiltered<Texture2D>(SelectionMode.Assets);
+    foreach (var texture in selectedTextures)
+    {
+      if (textures.IndexOf(texture) == -1)
+      {
+        textures.Add(texture);
+      }
+    }
+
+    bool hasTex = textures.Count > 0;
+    if (hasTex)
+    {
+      EditorGUI.indentLevel++;
+      GUILayout.Label("Selected Textures", EditorStyles.boldLabel);
+      foreach (var texture in textures)
+      {
+        EditorGUILayout.InspectorTitlebar(true, texture);
+        DrawTextureInspector(texture);
+      }
+
+      if (GUILayout.Button("Export Textures"))
+      {
+        var exporter = new GLTFSceneExporter(Selection.transforms, new ExportOptions());
+        var path = EditorUtility.OpenFolderPanel("Textures export path", "", "");
+        foreach (Texture2D tex in textures)
+        {
+          exporter.ExportTexture(tex, path);
+          exporter.ExportCompressed(tex, tex, path);
+        }
+      }
+      EditorGUI.indentLevel--;
+    }
+
+    GUILayout.EndScrollView();
+    Repaint();
 
   }
 
-  private void DrawInspector (Texture2D texture) {
-    GUILayout.Label ("Add your custom inspection here");
-    var path = AssetDatabase.GetAssetPath( texture );
-    EditorGUILayout.TextField ("Text Field", path );
-    var assets = AssetDatabase.LoadAllAssetsAtPath( path );
 
-    EditorGUI.indentLevel++;
-    foreach (var o in assets)
+  private void DrawTextureInspector(Texture2D texture)
+  {
+
+    GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
+
+    GLTFTextureSettingsBinding binding = reg.GetBinding(texture);
+
+    if (binding != null)
     {
-      GUILayout.Label (o.name);
+      EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+      var so = new SerializedObject(binding);
+      EditorGUILayout.PropertyField(so.FindProperty("settings"), new GUIContent("Export Settings"));
+      so.ApplyModifiedProperties();
+
+      GUILayout.Space(5);
+      if (GUILayout.Button("Remove Settings"))
+      {
+        reg.RemoveSettings(texture);
+      }
+
+      GUILayout.Space(10);
 
     }
-
-    if(GUILayout.Button("Add Settings"))
+    else if (GUILayout.Button("Add Settings"))
     {
-
-      var settings = ScriptableObject.CreateInstance<GLTFExportTextureSettings>();
-      settings.hideFlags = HideFlags.HideInHierarchy;
-      // AssetDatabase.CreateAsset (settings, path+".settings.asset");
-      // AssetDatabase.AddObjectToAsset( texture, settings );
-      // AssetDatabase.Refresh();
-      AssetDatabase.AddObjectToAsset( settings, texture );
-      // AssetDatabase.Refresh();
+      reg.CreateSettings(texture);
     }
-    EditorGUI.indentLevel--;
+
+    EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+    GUILayout.Space(20);
+
+
+
+
   }
 }

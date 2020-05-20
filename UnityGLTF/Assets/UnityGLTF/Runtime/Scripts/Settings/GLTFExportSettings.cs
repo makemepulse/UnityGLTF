@@ -7,7 +7,8 @@ using UnityEditor;
 
 
 [CustomEditor(typeof(GLTFExportSettings))]
-internal class SettingsEditor : UnityEditor.Editor {
+internal class SettingsEditor : UnityEditor.Editor
+{
   Vector2 scrollPos = Vector2.zero;
   const float LabelWidth = 150;
   const float SelectableLabelMinWidth = 90;
@@ -19,42 +20,46 @@ internal class SettingsEditor : UnityEditor.Editor {
 
   private string[] exportFormatOptions = new string[] { "GLB", "GLTF" };
 
-  public List<SerializedProperty> GetSections( SerializedProperty infoProperty ){
+  public List<SerializedProperty> GetSections(SerializedProperty infoProperty)
+  {
 
     infoProperty.Next(true);
     var sectionProperty = infoProperty.Copy();
 
     var res = new List<SerializedProperty>();
-    do {
-      res.Add( sectionProperty.Copy() );
-    } while( sectionProperty.Next(false) );
+    do
+    {
+      res.Add(sectionProperty.Copy());
+    } while (sectionProperty.Next(false));
     return res;
   }
 
-  public override void OnInspectorGUI() {
-    
+  public override void OnInspectorGUI()
+  {
+
     serializedObject.Update();
-    
+
     GLTFExportSettings exportSettings = (GLTFExportSettings)target;
     GLTFExportSettingsData data = exportSettings.info;
     SerializedProperty infoProperty = serializedObject.FindProperty("m_info");
-    
-    var sections = GetSections( infoProperty );
+
+    var sections = GetSections(infoProperty);
 
     // Increasing the label width so that none of the text gets cut off
     EditorGUIUtility.labelWidth = LabelWidth;
 
-    GUILayout.BeginVertical ();
+    GUILayout.BeginVertical();
     var w = EditorGUIUtility.currentViewWidth;
     foreach (var section in sections)
     {
-      section.isExpanded = true;
-      var h = EditorGUI.GetPropertyHeight( section, true );
-      var myRect = GUILayoutUtility.GetRect(20, h+10);
+      // Debug.Log(section.name);
+      // section.isExpanded = true;
+      var h = EditorGUI.GetPropertyHeight(section, true);
+      var myRect = GUILayoutUtility.GetRect(20, h + 10);
       EditorGUI.PropertyField(myRect, section, true);
     }
 
-    GUILayout.EndVertical ();
+    GUILayout.EndVertical();
 
     serializedObject.ApplyModifiedProperties();
   }
@@ -63,7 +68,8 @@ internal class SettingsEditor : UnityEditor.Editor {
 #endif
 
 
-public class GLTFExportSettings : SerializedSettings<GLTFExportSettingsData> {
+public class GLTFExportSettings : SerializedSettings<GLTFExportSettingsData>
+{
 
   // [SerializeField]
   // public SettingsSerializable directSettings;
@@ -73,24 +79,37 @@ public class GLTFExportSettings : SerializedSettings<GLTFExportSettingsData> {
 
   private static GLTFExportSettings m_defaults = null;
 
-  public static GLTFExportSettings Defaults {
-    get {
-      if (m_defaults == null) {
-        m_defaults = LoadDefaults ();
+  public static GLTFExportSettings Defaults
+  {
+    get
+    {
+      if (m_defaults == null)
+      {
+        m_defaults = LoadDefaults();
       }
       return m_defaults;
     }
   }
 
-  private static GLTFExportSettings LoadDefaults() {
+  private static GLTFExportSettings LoadDefaults()
+  {
     GLTFExportSettings settings;
 
-    if (!EditorBuildSettings.TryGetConfigObject (k_ConfigObjectName, out settings)) {
-      settings = ScriptableObject.CreateInstance<GLTFExportSettings> ();
-      AssetDatabase.CreateAsset (settings, k_SettingsPath);
-      EditorBuildSettings.AddConfigObject (k_ConfigObjectName, settings, true);
+    if (!EditorBuildSettings.TryGetConfigObject(k_ConfigObjectName, out settings))
+    {
+      settings = ScriptableObject.CreateInstance<GLTFExportSettings>();
+      AssetDatabase.CreateAsset(settings, k_SettingsPath);
+      EditorBuildSettings.AddConfigObject(k_ConfigObjectName, settings, true);
     }
     return settings;
+  }
+
+  [MenuItem("GLTF/Generate Settings")]
+  private static void CreateSettings()
+  {
+
+    Debug.Log(Defaults);
+
   }
 
 }

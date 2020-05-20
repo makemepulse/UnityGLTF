@@ -1,41 +1,31 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 
 [System.Serializable]
-public class GLTFExportTextureSettingsSerializable
+public class GLTFExportTextureSettings
 {
 
-  
-  public enum LODExportType {
-    Highest = 0,
-    Lowest  = 1,
+  // TODO
+  public enum Resize
+  {
+    None = 0,
+    Quart = 1,
+    Half = 2
   }
 
-  [Flags]
-  public enum ExportedAttributes {
-    Position = 1<<0,
-    Normal = 1<<1,
-    Tangent = 1<<2,
-    UV0 = 1<<3,
-    UV1 = 1<<4,
-    UV2 = 1<<5,
-    UV3 = 1<<6,
-  }
-
-  private const ExportedAttributes ALL_ATTRIBUTES = ExportedAttributes.UV3 | (ExportedAttributes.UV3-1);
-
-
-
+  // TODO
+  [HideInInspector]
   [SerializeField]
-  public bool exportMeshes;
+  public Resize resize = Resize.None;
 
+  // TODO
+  [HideInInspector]
   [SerializeField]
-  public ExportedAttributes attributes = ALL_ATTRIBUTES;
+  public bool flipY;
 
-  [SerializeField]
-  public LODExportType lod;
+  public bool Compress = false;
+  public bool GenerateMipMap = false;
 
 }
-
-public class GLTFExportTextureSettings : SerializedSettings<GLTFExportMeshSettingsSerializable>{}
