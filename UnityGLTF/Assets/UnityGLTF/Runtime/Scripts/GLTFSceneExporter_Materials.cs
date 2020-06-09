@@ -115,11 +115,15 @@ namespace UnityGLTF
 				}
 			}
 
-			if (IsPBRMetallicRoughness(materialObj))
+			if( IsUnlit(materialObj)){
+
+				ExportUnlit( material, materialObj );
+			}
+			else if (IsPBRMetallicRoughness(materialObj))
 			{
 				material.PbrMetallicRoughness = ExportPBRMetallicRoughness(materialObj);
 			}
-			if (IsPBRSpecularGlossiness(materialObj))
+			else if (IsPBRSpecularGlossiness(materialObj))
 			{
 				ExportPBRSpecularGlossiness( material, materialObj );
 			}
@@ -147,6 +151,11 @@ namespace UnityGLTF
 			return material.HasProperty("_Metallic") && material.HasProperty("_MetallicGlossMap");
 		}
 
+		private bool IsUnlit(Material material)
+		{
+			return material.shader.name.ToLowerInvariant().Contains("unlit");
+		}
+
 		private bool IsPBRSpecularGlossiness(Material material)
 		{
 			return material.HasProperty("_SpecColor") && material.HasProperty("_SpecGlossMap");
@@ -165,7 +174,15 @@ namespace UnityGLTF
 			Vector2 offset = mat.GetTextureOffset(texName);
 			Vector2 scale = mat.GetTextureScale(texName);
 
-			if (offset == Vector2.zero && scale == Vector2.one) return;
+      // most material only use the main tex transform to sample all textures
+			if (offset == Vector2.zero && scale == Vector2.one) {
+		
+			  offset = mat.GetTextureOffset("_MainTex");
+			  scale = mat.GetTextureScale("_MainTex");
+			  
+        if (offset == Vector2.zero && scale == Vector2.one) 
+          return;
+      }
 
 			DeclareExtensionUsage( ExtTextureTransformExtensionFactory.EXTENSION_NAME, true );
 
@@ -288,6 +305,41 @@ namespace UnityGLTF
 
 			return pbr;
 		}
+
+		private void ExportUnlit(GLTFMaterial def, Material material){
+			
+			const string extname = KHR_MaterialsUnlitExtensionFactory.EXTENSION_NAME;
+			DeclareExtensionUsage( extname, true );
+			def.AddExtension( extname, new KHR_MaterialsUnlitExtension());
+
+			var pbr = new PbrMetallicRoughness();
+
+			if (material.HasProperty("_Color"))
+			{
+				pbr.BaseColorFactor = material.GetColor("_Color").ToNumericsColorLinear();
+			}
+
+			if (material.HasProperty("_MainTex"))
+			{
+				var mainTex = material.GetTexture("_MainTex");
+				if (mainTex != null)
+				{
+					if(mainTex is Texture2D)
+					{
+						pbr.BaseColorTexture = ExportTextureInfo(mainTex, TextureMapType.Main);
+						ExportTextureTransform(pbr.BaseColorTexture, material, "_MainTex");
+					}
+					else
+					{
+						Debug.LogErrorFormat("Can't export a {0} base texture in material {1}", mainTex.GetType(), material.name);
+					}
+				}
+			}
+
+			def.PbrMetallicRoughness = pbr;
+
+		}
+		
 
 		private void ExportPBRSpecularGlossiness(GLTFMaterial def, Material material){
 			const string extname = KHR_materials_pbrSpecularGlossinessExtensionFactory.EXTENSION_NAME;
