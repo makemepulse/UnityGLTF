@@ -18,5 +18,7 @@
 			"path": "Samples~"
 		}
 	],
-	"dependencies": {}
+	"dependencies": {
+		"com.unity.2d.animation": "4.2.8"
+	}
 }
