@@ -28,7 +28,12 @@ namespace UnityGLTF
 			(
 				gameObject.GetComponent<SkinnedMeshRenderer>() != null && 
 				gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh != null
-			);
+			) ||
+			(
+				gameObject.GetComponent<SpriteRenderer>() != null &&
+				gameObject.GetComponent<SpriteRenderer>().sprite != null
+			)
+			;
 		}
 
 
@@ -49,7 +54,7 @@ namespace UnityGLTF
 			for (var i = 0; i < childCount; i++)
 			{
 				var go = transform.GetChild(i).gameObject;
-				if (IsPrimitive(go))
+				if (IsPrimitive(go) && !GLTFExportSettings.Defaults.info.PreserveHierarchy)
 					prims.Add(go);
 				else
 					nonPrims.Add(go);
@@ -99,6 +104,11 @@ namespace UnityGLTF
 				// }
 
 				return skinMesh.sharedMesh;
+			}
+
+			SpriteRenderer spriteMesh = gameObject.GetComponent<SpriteRenderer>();
+			if(spriteMesh){
+				return GetSpriteMesh(gameObject);
 			}
 
 			return null;

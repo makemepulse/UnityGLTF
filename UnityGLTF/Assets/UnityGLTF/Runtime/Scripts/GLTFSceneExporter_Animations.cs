@@ -9,7 +9,7 @@ using UnityGLTF.Extensions;
 
 namespace UnityGLTF
 {
-	
+
 	public partial class GLTFSceneExporter
 	{
 
@@ -43,44 +43,112 @@ namespace UnityGLTF
 
 		private void ExportAnimation()
 		{
-			GLTFAnimation anim = new GLTFAnimation();
-			anim.Name = "default";
 
 			for (int i = 0; i < _animatedNodes.Count; ++i)
 			{
 				Transform t = _animatedNodes[i];
-        Debug.Log("AnimatedNode "+ t.name);
-				ExportAnimationFromNode(ref t, ref anim);
+				Debug.Log("AnimatedNode " + t.name);
+				CreateAndExportAnimationFromNode(ref t);
+				// GLTFAnimation anim = new GLTFAnimation();
+				// anim.Name = t.name;
+				// ExportAnimationFromNode(ref t, ref anim);
+				// if (anim.Channels.Count > 0 && anim.Samplers.Count > 0)
+				// {
+				//     _root.Animations.Add(anim);
+				// }
 			}
 
-			if (anim.Channels.Count > 0 && anim.Samplers.Count > 0)
-			{
-				_root.Animations.Add(anim);
-			}
 		}
+
+
+		public void CreateAndExportAnimationFromNode(ref Transform transform)
+		{
+#if UNITY_EDITOR
+
+
+			UnityEngine.Animation animation = transform.GetComponent<UnityEngine.Animation>();
+
+			if (animation != null)
+			{
+				AnimationClip[] clips = AnimationUtility.GetAnimationClips(transform.gameObject);
+				for (int i = 0; i < clips.Length; i++)
+				{
+					GLTFAnimation anim = new GLTFAnimation();
+					anim.Name = clips[i].name;
+					//FIXME It seems not good to generate one animation per animator.
+					ConvertClipToGLTFAnimation(clips[i], transform, anim);
+					if (anim.Channels.Count > 0 && anim.Samplers.Count > 0)
+					{
+						Debug.Log(anim);
+						_root.Animations.Add(anim);
+					}
+				}
+			}
+
+
+			Animator a = transform.GetComponent<Animator>();
+			if (a != null)
+			{
+				AnimationClip[] clips = AnimationUtility.GetAnimationClips(transform.gameObject);
+				if (a.avatar != null)
+				{
+					// a.avatar
+					for (int i = 0; i < clips.Length; i++)
+					{
+						GLTFAnimation anim = new GLTFAnimation();
+						anim.Name = clips[i].name;
+						//FIXME It seems not good to generate one animation per animator.
+						ConvertClipToGLTFAnimation(clips[i], transform, anim, a);
+						if (anim.Channels.Count > 0 && anim.Samplers.Count > 0)
+						{
+							_root.Animations.Add(anim);
+						}
+					}
+				}
+				else
+				{
+					for (int i = 0; i < clips.Length; i++)
+					{
+						GLTFAnimation anim = new GLTFAnimation();
+						anim.Name = clips[i].name;
+						//FIXME It seems not good to generate one animation per animator.
+						ConvertClipToGLTFAnimation(clips[i], transform, anim);
+						if (anim.Channels.Count > 0 && anim.Samplers.Count > 0)
+						{
+							_root.Animations.Add(anim);
+						}
+					}
+				}
+			}
+#endif
+		}
+
 
 		// Parses Animation/Animator component and generate a glTF animation for the active clip
 		public void ExportAnimationFromNode(ref Transform transform, ref GLTFAnimation anim)
 		{
-			#if UNITY_EDITOR
+#if UNITY_EDITOR
 			Animator a = transform.GetComponent<Animator>();
 			if (a != null)
 			{
-        AnimationClip[] clips = AnimationUtility.GetAnimationClips(transform.gameObject);
-				if(a.avatar != null){
-          // a.avatar
-          for (int i = 0; i < clips.Length; i++)
-          {
-            //FIXME It seems not good to generate one animation per animator.
-            ConvertClipToGLTFAnimation( clips[i], transform, anim, a);
-          }
-        } else {
-          for (int i = 0; i < clips.Length; i++)
-          {
-            //FIXME It seems not good to generate one animation per animator.
-            ConvertClipToGLTFAnimation( clips[i], transform, anim);
-          }
-        }
+				AnimationClip[] clips = AnimationUtility.GetAnimationClips(transform.gameObject);
+				if (a.avatar != null)
+				{
+					// a.avatar
+					for (int i = 0; i < clips.Length; i++)
+					{
+						//FIXME It seems not good to generate one animation per animator.
+						ConvertClipToGLTFAnimation(clips[i], transform, anim, a);
+					}
+				}
+				else
+				{
+					for (int i = 0; i < clips.Length; i++)
+					{
+						//FIXME It seems not good to generate one animation per animator.
+						ConvertClipToGLTFAnimation(clips[i], transform, anim);
+					}
+				}
 			}
 
 			UnityEngine.Animation animation = transform.GetComponent<UnityEngine.Animation>();
@@ -90,10 +158,10 @@ namespace UnityGLTF
 				for (int i = 0; i < clips.Length; i++)
 				{
 					//FIXME It seems not good to generate one animation per animator.
-					ConvertClipToGLTFAnimation( clips[i], transform, anim);
+					ConvertClipToGLTFAnimation(clips[i], transform, anim);
 				}
 			}
-			#endif
+#endif
 		}
 
 
@@ -110,40 +178,71 @@ namespace UnityGLTF
 			}
 		}
 
-		private List<Transform> CollectAvatarTransforms( Animator animator ){
-      var res = new List<Transform>();
-      for( int i =0; i < (int)HumanBodyBones.LastBone; i++ ){
-        var tr = animator.GetBoneTransform( (HumanBodyBones)i );
-        if( tr != null )res.Add( tr );
-      }
-      return res;
-    }
+		private List<Transform> CollectAvatarTransforms(Animator animator)
+		{
+			var res = new List<Transform>();
+			if (animator.avatar.isHuman)
+			{
+				for (int i = 0; i < (int)HumanBodyBones.LastBone; i++)
+				{
+					var tr = animator.GetBoneTransform((HumanBodyBones)i);
+					if (tr != null) res.Add(tr);
+				}
+			}
+			else
+			{
+				Transform rigRoot = null;
+				int tcount = animator.transform.childCount;
+				for (int i = 0; i < tcount; i++)
+				{
+					if (!animator.transform.GetChild(i).GetComponent<SkinnedMeshRenderer>())
+					{
+						rigRoot = animator.transform.GetChild(i);
+					}
+				}
+				if (rigRoot != null)
+				{
+					var ts = rigRoot.GetComponentsInChildren<Transform>();
+					for (int i = 0; i < ts.Length; i++)
+					{
+						res.Add(ts[i]);
+					}
+				}
+			}
+			return res;
+		}
 
-		private void ConvertClipToGLTFAnimation( AnimationClip clip, Transform transform, GLTFAnimation animation, Animator animator){
-      
-			Debug.Log( $"ConvertClipToGLTFAnimation clip.length : {clip.length}" );
-      // Debug.Log(transform.name);
-      AnimationCurve[] rootMotionCurves = new AnimationCurve[3];
-      if( clip.hasRootCurves){
-        
-        foreach (var binding in UnityEditor.AnimationUtility.GetCurveBindings(clip))
-        {
-          if( binding.propertyName == "MotionT.x"){
-            rootMotionCurves[0] = AnimationUtility.GetEditorCurve(clip, binding);
+		private void ConvertClipToGLTFAnimation(AnimationClip clip, Transform transform, GLTFAnimation animation, Animator animator)
+		{
+			Debug.Log($"ConvertClipToGLTFAnimation clip.length : {clip.length}");
+			// Debug.Log(transform.name);
+			AnimationCurve[] rootMotionCurves = new AnimationCurve[3];
+			if (clip.hasRootCurves)
+			{
+
+				foreach (var binding in UnityEditor.AnimationUtility.GetCurveBindings(clip))
+				{
+					if (binding.propertyName == "MotionT.x")
+					{
+						rootMotionCurves[0] = AnimationUtility.GetEditorCurve(clip, binding);
 						var curve = rootMotionCurves[0];
-						var duration = curve.keys[curve.length-1].time;
-						Debug.Log( $"ConvertClipToGLTFAnimation rootmotion curve duration: {duration}" );
-          } else if( binding.propertyName == "MotionT.y"){
-            rootMotionCurves[1] = AnimationUtility.GetEditorCurve(clip, binding);
-          } else if( binding.propertyName == "MotionT.z"){
-            rootMotionCurves[2] = AnimationUtility.GetEditorCurve(clip, binding);
-          }
-        }
-      }
+						var duration = curve.keys[curve.length - 1].time;
+						Debug.Log($"ConvertClipToGLTFAnimation rootmotion curve duration: {duration}");
+					}
+					else if (binding.propertyName == "MotionT.y")
+					{
+						rootMotionCurves[1] = AnimationUtility.GetEditorCurve(clip, binding);
+					}
+					else if (binding.propertyName == "MotionT.z")
+					{
+						rootMotionCurves[2] = AnimationUtility.GetEditorCurve(clip, binding);
+					}
+				}
+			}
 
 
-      var allBones = CollectAvatarTransforms( animator );
-      int nbSamples = (int)(clip.length * bakingFramerate);
+			var allBones = CollectAvatarTransforms(animator);
+			int nbSamples = (int)(clip.length * bakingFramerate);
 			float deltaTime = clip.length / nbSamples;
 
 			float[] times = new float[nbSamples];
@@ -151,77 +250,79 @@ namespace UnityGLTF
 			{
 				float currentTime = t * deltaTime;
 				times[t] = currentTime;
-      }
+			}
 
-      for (int i = 0; i < allBones.Count; i++)
-      {
-        Transform bone = allBones[i].transform;
+			for (int i = 0; i < allBones.Count; i++)
+			{
+				Transform bone = allBones[i].transform;
 
-        // if( !animator.applyRootMotion && bone == animator)
-        // Initialize Arrays
-        var positions = new Vector3[nbSamples];
-        var rotations = new Vector4[nbSamples];
-        var scales    = new Vector3[nbSamples];
+				// if( !animator.applyRootMotion && bone == animator)
+				// Initialize Arrays
+				var positions = new Vector3[nbSamples];
+				var rotations = new Vector4[nbSamples];
+				var scales = new Vector3[nbSamples];
 
 
 
-        for (int j = 0; j < nbSamples; ++j)
-        {
-          float currentTime = j * deltaTime;
-          clip.SampleAnimation( transform.gameObject, currentTime );
-          positions[j] = bone.localPosition;
-          rotations[j] =  new Vector4( bone.localRotation.x, bone.localRotation.y, bone.localRotation.z, bone.localRotation.w );
-          scales[j] = bone.localScale;
-          // Debug.Log(allBones[i].transform.name + " " + positions[j]);
-        }
+				for (int j = 0; j < nbSamples; ++j)
+				{
+					float currentTime = j * deltaTime;
+					clip.SampleAnimation(transform.gameObject, currentTime);
+					positions[j] = bone.localPosition;
+					rotations[j] = new Vector4(bone.localRotation.x, bone.localRotation.y, bone.localRotation.z, bone.localRotation.w);
+					scales[j] = bone.localScale;
+					// Debug.Log(allBones[i].transform.name + " " + positions[j]);
+				}
 
 
 				int channelTargetId = GetTargetIdFromTransform(ref bone);
 				AccessorId timeAccessor = ExportAccessor(times);
 
-        // cancel root motion from root motion  curve
-				if( !animator.applyRootMotion && i==0 ){
-          
-          if( rootMotionCurves[0] != null){
+				// cancel root motion from root motion  curve
+				if (!animator.applyRootMotion && i == 0)
+				{
 
-            for (int j = 0; j < nbSamples; ++j)
-            {
-              float currentTime = j * deltaTime;
-              positions[j].x -= rootMotionCurves[0].Evaluate( currentTime );
-              positions[j].y -= rootMotionCurves[1].Evaluate( currentTime );
-              positions[j].z -= rootMotionCurves[2].Evaluate( currentTime );
-            }
+					if (rootMotionCurves[0] != null)
+					{
 
-          }
-        }
+						for (int j = 0; j < nbSamples; ++j)
+						{
+							float currentTime = j * deltaTime;
+							positions[j].x -= rootMotionCurves[0].Evaluate(currentTime);
+							positions[j].y -= rootMotionCurves[1].Evaluate(currentTime);
+							positions[j].z -= rootMotionCurves[2].Evaluate(currentTime);
+						}
+
+					}
+				}
 
 				// assume Hips is the root bone
 				// skip it's position animation if controller don't apply root motion
 
-        // Create channel
-        AnimationChannel Tchannel = new AnimationChannel();
-        AnimationChannelTarget TchannelTarget = new AnimationChannelTarget();
-        TchannelTarget.Path = GLTFAnimationChannelPath.translation;
-        TchannelTarget.Node = new NodeId
-        {
-          Id = channelTargetId,
-          Root = _root
-        };
+				// Create channel
+				AnimationChannel Tchannel = new AnimationChannel();
+				AnimationChannelTarget TchannelTarget = new AnimationChannelTarget();
+				TchannelTarget.Path = GLTFAnimationChannelPath.translation;
+				TchannelTarget.Node = new NodeId
+				{
+					Id = channelTargetId,
+					Root = _root
+				};
 
-        Tchannel.Target = TchannelTarget;
+				Tchannel.Target = TchannelTarget;
 
-        AnimationSampler Tsampler = new AnimationSampler();
-        Tsampler.Input = timeAccessor;
-        Tsampler.Output = ExportAccessor(SchemaExtensions.ConvertVector3CoordinateSpaceAndCopy(positions, SchemaExtensions.CoordinateSpaceConversionScale)); // Sketchfab change handedness here (-z)
-        Tchannel.Sampler = new AnimationSamplerId
-        {
-          Id = animation.Samplers.Count,
-          GLTFAnimation = animation,
-          Root = _root
-        };
+				AnimationSampler Tsampler = new AnimationSampler();
+				Tsampler.Input = timeAccessor;
+				Tsampler.Output = ExportAccessor(SchemaExtensions.ConvertVector3CoordinateSpaceAndCopy(positions, SchemaExtensions.CoordinateSpaceConversionScale)); // Sketchfab change handedness here (-z)
+				Tchannel.Sampler = new AnimationSamplerId
+				{
+					Id = animation.Samplers.Count,
+					GLTFAnimation = animation,
+					Root = _root
+				};
 
-        animation.Samplers.Add(Tsampler);
-        animation.Channels.Add(Tchannel);
+				animation.Samplers.Add(Tsampler);
+				animation.Channels.Add(Tchannel);
 				// }
 
 				// Rotation
@@ -238,7 +339,7 @@ namespace UnityGLTF
 
 				AnimationSampler Rsampler = new AnimationSampler();
 				Rsampler.Input = timeAccessor; // Float, for time
-				Rsampler.Output = ExportAccessor(SchemaExtensions.ConvertQuaternionsCoordinateSpaceAndCopy(rotations) ); // Vec4 for
+				Rsampler.Output = ExportAccessor(SchemaExtensions.ConvertQuaternionsCoordinateSpaceAndCopy(rotations)); // Vec4 for
 				Rchannel.Sampler = new AnimationSamplerId
 				{
 					Id = animation.Samplers.Count,
@@ -274,12 +375,12 @@ namespace UnityGLTF
 				animation.Samplers.Add(Ssampler);
 				animation.Channels.Add(Schannel);
 
-			
-      }
-    }
+
+			}
+		}
 
 
-		private void ConvertClipToGLTFAnimation( AnimationClip clip, Transform transform, GLTFAnimation animation)
+		private void ConvertClipToGLTFAnimation(AnimationClip clip, Transform transform, GLTFAnimation animation)
 		{
 			// Generate GLTF.Schema.AnimationChannel and GLTF.Schema.AnimationSampler
 			// 1 channel per node T/R/S, one sampler per node T/R/S
@@ -299,7 +400,7 @@ namespace UnityGLTF
 				// Bake animation for all animated nodes
 				foreach (string target in targetCurvesBinding.Keys)
 				{
-          Debug.Log("target : "+target);
+					Debug.Log("target : " + target);
 					Transform targetTr = target.Length > 0 ? transform.Find(target) : transform;
 					if (targetTr == null || targetTr.GetComponent<SkinnedMeshRenderer>())
 					{
@@ -357,7 +458,7 @@ namespace UnityGLTF
 
 					AnimationSampler Rsampler = new AnimationSampler();
 					Rsampler.Input = timeAccessor; // Float, for time
-					Rsampler.Output = ExportAccessor(SchemaExtensions.ConvertQuaternionsCoordinateSpaceAndCopy(rotations) ); // Vec4 for
+					Rsampler.Output = ExportAccessor(SchemaExtensions.ConvertQuaternionsCoordinateSpaceAndCopy(rotations)); // Vec4 for
 					Rchannel.Sampler = new AnimationSamplerId
 					{
 						Id = animation.Samplers.Count,
@@ -407,7 +508,7 @@ namespace UnityGLTF
 			{
 				AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
 
-        Debug.Log(binding.propertyName);
+				Debug.Log(binding.propertyName);
 				if (!targetCurves.ContainsKey(binding.path))
 				{
 					TargetCurveSet curveSet = new TargetCurveSet();

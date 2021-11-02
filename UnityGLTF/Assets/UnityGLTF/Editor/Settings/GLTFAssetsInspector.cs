@@ -10,6 +10,8 @@ public class GLTFAssetsInspector : EditorWindow
 
   Vector2 scrollView;
 
+  Dictionary<int, bool> foldStates = new Dictionary<int, bool>();
+
   // Add menu named "My Window" to the Window menu
   [MenuItem("GLTF/Assets Inspector")]
   static void Init()
@@ -44,7 +46,6 @@ public class GLTFAssetsInspector : EditorWindow
     var gltfSettings = Selection.GetFiltered<GLTFExportSettings>(SelectionMode.Assets);
     scrollView = GUILayout.BeginScrollView(scrollView);
 
-
     if (gltfSettings.Length > 0)
     {
       EditorGUILayout.InspectorTitlebar(true, gltfSettings[0]);
@@ -74,11 +75,6 @@ public class GLTFAssetsInspector : EditorWindow
             AddMaterialTextures(ref textures, material);
           }
         }
-        if (GUILayout.Button("Export GLTF"))
-        {
-          GLTFExportMenu.ExportSelected();
-        }
-        GUILayout.Space(10);
       }
     }
 
@@ -92,6 +88,10 @@ public class GLTFAssetsInspector : EditorWindow
         textures.Add(texture);
       }
     }
+    GUILayoutOption[] btnLayout = new GUILayoutOption[]{
+      GUILayout.MaxWidth(150),
+      GUILayout.MinHeight(50),
+    };
 
     bool hasTex = textures.Count > 0;
     if (hasTex)
@@ -100,22 +100,44 @@ public class GLTFAssetsInspector : EditorWindow
       GUILayout.Label("Selected Textures", EditorStyles.boldLabel);
       foreach (var texture in textures)
       {
-        EditorGUILayout.InspectorTitlebar(true, texture);
         DrawTextureInspector(texture);
-      }
-
-      if (GUILayout.Button("Export Textures"))
-      {
-        var exporter = new GLTFSceneExporter(Selection.transforms, new ExportOptions());
-        var path = EditorUtility.OpenFolderPanel("Textures export path", "", "");
-        foreach (Texture2D tex in textures)
-        {
-          exporter.ExportTexture(tex, path);
-          exporter.ExportCompressed(tex, tex, path);
-        }
       }
       EditorGUI.indentLevel--;
     }
+
+    GUILayout.Space(10);
+    GUILayout.BeginHorizontal();
+    GUILayout.FlexibleSpace();
+
+    if (hasTex)
+    {
+      if (GUILayout.Button("Export Textures", btnLayout))
+      {
+        var exporter = new GLTFSceneExporter(Selection.transforms, new ExportOptions());
+        var path = EditorUtility.OpenFolderPanel("Textures export path", "", "");
+        if (path != "")
+        {
+          foreach (Texture2D tex in textures)
+          {
+            exporter.ExportTexture(tex, path);
+            exporter.ExportCompressed(tex, tex, path);
+          }
+        }
+      }
+    }
+    GUILayout.FlexibleSpace();
+    GUILayout.EndHorizontal();
+
+    GUILayout.BeginHorizontal();
+    GUILayout.FlexibleSpace();
+
+    if (GUILayout.Button("Export GLTF", btnLayout))
+    {
+      GLTFExportMenu.ExportSelected();
+    }
+
+    GUILayout.FlexibleSpace();
+    GUILayout.EndHorizontal();
 
     GUILayout.EndScrollView();
     Repaint();
@@ -130,34 +152,59 @@ public class GLTFAssetsInspector : EditorWindow
 
     GLTFTextureSettingsBinding binding = reg.GetBinding(texture);
 
+    int ID = texture.GetInstanceID();
+    if (!foldStates.ContainsKey(ID))
+    {
+      foldStates.Add(ID, false);
+    }
+
+    bool foldState;
+    foldStates.TryGetValue(ID, out foldState);
+    foldState = EditorGUILayout.InspectorTitlebar(foldState, texture);
+    foldStates[ID] = foldState;
+    if (!foldState)
+      return;
+
+    GUILayoutOption[] btnLayout = new GUILayoutOption[]{
+      GUILayout.MaxWidth(150)
+    };
+
+    EditorGUILayout.BeginVertical();
+    GUILayout.Space(10);
+
     if (binding != null)
     {
-      EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
       var so = new SerializedObject(binding);
-      EditorGUILayout.PropertyField(so.FindProperty("settings"), new GUIContent("Export Settings"));
+      EditorGUILayout.ObjectField(texture, typeof(Texture2D), true);
+      EditorGUILayout.PropertyField(so.FindProperty("settings.Compress"), true);
+      EditorGUILayout.PropertyField(so.FindProperty("settings.GenerateMipMap"), true);
       so.ApplyModifiedProperties();
 
       GUILayout.Space(5);
-      if (GUILayout.Button("Remove Settings"))
+      GUILayout.BeginHorizontal();
+      GUILayout.Space(25);
+
+      if (GUILayout.Button("Remove Settings", btnLayout))
       {
         reg.RemoveSettings(texture);
       }
-
-      GUILayout.Space(10);
+      GUILayout.EndHorizontal();
 
     }
-    else if (GUILayout.Button("Add Settings"))
+    else
     {
-      reg.CreateSettings(texture);
+      GUILayout.BeginHorizontal();
+      GUILayout.Space(25);
+      if (GUILayout.Button("Add Settings", btnLayout))
+      {
+        reg.CreateSettings(texture);
+      }
+      GUILayout.EndHorizontal();
     }
 
-    EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-    GUILayout.Space(20);
-
-
-
+    GUILayout.Space(10);
+    EditorGUILayout.EndVertical();
 
   }
 }

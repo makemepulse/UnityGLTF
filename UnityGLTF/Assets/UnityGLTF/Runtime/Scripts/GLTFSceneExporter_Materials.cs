@@ -153,7 +153,7 @@ namespace UnityGLTF
 
 		private bool IsUnlit(Material material)
 		{
-			return material.shader.name.ToLowerInvariant().Contains("unlit");
+			return material.shader.name.ToLowerInvariant().Contains("unlit") || material.shader.name.ToLowerInvariant().Contains("sprite");;
 		}
 
 		private bool IsPBRSpecularGlossiness(Material material)
