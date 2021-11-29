@@ -1,6 +1,8 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
+using UnityGLTF.Cache;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -10,6 +12,8 @@ using UnityEditor;
 [System.Serializable]
 public class GLTFTexturesRegistry
 {
+
+  static public string CACHE_LOCATION = "UnityGLTF/tex-cache~";
 
   [SerializeField]
   private List<GLTFTextureSettingsBinding> m_bindings;
@@ -22,6 +26,20 @@ public class GLTFTexturesRegistry
         m_bindings = new List<GLTFTextureSettingsBinding>();
       }
       return m_bindings;
+    }
+  }
+
+  [SerializeField]
+  private List<TextureCompressedCacheData> m_compressedCache;
+  public List<TextureCompressedCacheData> CompressedCacheData
+  {
+    get
+    {
+      if (m_compressedCache == null)
+      {
+        m_compressedCache = new List<TextureCompressedCacheData>();
+      }
+      return m_compressedCache;
     }
   }
 
@@ -49,6 +67,32 @@ public class GLTFTexturesRegistry
     return binding;
   }
 
+  public bool GetOrCreateCacheData(Texture2D tex, GLTFExportTextureSettings settings, TextureFormat fmt, out TextureCompressedCacheData cacheData)
+  {
+
+    bool valid = true;
+    cacheData = CompressedCacheData.Find((TextureCompressedCacheData data) => data.Texture == tex && data.format == fmt);
+
+    if (cacheData == null)
+    {
+      valid = false;
+      cacheData = new TextureCompressedCacheData(tex, settings, fmt);
+      m_compressedCache.Add(cacheData);
+    }
+
+    if (!cacheData.Validate(settings))
+    {
+      valid = false;
+    }
+
+    return valid;
+  }
+
+  public void RemoveCacheData(TextureCompressedCacheData cache)
+  {
+    cache.Dispose();
+    m_compressedCache.Remove(cache);
+  }
 
   public GLTFExportTextureSettings GetSettings(Texture2D texture)
   {
@@ -63,7 +107,7 @@ public class GLTFTexturesRegistry
 
   public GLTFExportTextureSettings CreateSettings(Texture2D texture)
   {
-
+    EditorUtility.ClearProgressBar();
     GLTFTextureSettingsBinding binding = GetBinding(texture);
     if (binding != null)
     {

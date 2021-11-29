@@ -73,7 +73,6 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
-*.dll*
 *.pdb*
 *.pri*
 
@@ -153,3 +152,4 @@ _pkginfo.txt
 
 # Current_Package folder
 current-package/
+.DS_Store

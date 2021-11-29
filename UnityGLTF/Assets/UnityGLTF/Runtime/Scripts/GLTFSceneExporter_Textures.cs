@@ -410,7 +410,7 @@ namespace UnityGLTF
       switch (texture.filterMode)
       {
         case FilterMode.Point:
-          sampler.MinFilter = MinFilterMode.NearestMipmapNearest;
+          sampler.MinFilter = MinFilterMode.Nearest;
           sampler.MagFilter = MagFilterMode.Nearest;
           break;
         case FilterMode.Bilinear:

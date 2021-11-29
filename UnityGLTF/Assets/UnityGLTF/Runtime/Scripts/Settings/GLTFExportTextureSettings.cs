@@ -28,4 +28,13 @@ public class GLTFExportTextureSettings
   public bool Compress = false;
   public bool GenerateMipMap = false;
 
+  public bool Equals(GLTFExportTextureSettings x)
+  {
+    bool equals = resize == x.resize;
+    equals = equals && flipY == x.flipY;
+    equals = equals && Compress == x.Compress;
+    equals = equals && GenerateMipMap == x.GenerateMipMap;
+    return equals;
+  }
+
 }

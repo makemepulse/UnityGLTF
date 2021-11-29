@@ -5,8 +5,9 @@ using System.IO;
 using System.Text;
 using GLTF.Schema;
 using GLTF.Schema.KHR_lights_punctual;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.Rendering;
+using UnityEngine.U2D.Animation;
 using UnityGLTF.Extensions;
 using CameraType = GLTF.Schema.CameraType;
 using WrapMode = GLTF.Schema.WrapMode;
@@ -54,6 +55,7 @@ namespace UnityGLTF
 		private List<Material> _materials;
 		private Dictionary<int, NodeId> _nodesByInstanceId;
 		private List<Transform> _skinnedNodes;
+		private List<Transform> _skinnedSpriteNodes;
 		private List<Transform> _animatedNodes;
 		private bool _shouldUseInternalBufferForImages;
 
@@ -132,8 +134,11 @@ namespace UnityGLTF
 			_materials = new List<Material>();
 			_textures = new List<Texture>();
 			_skinnedNodes = new List<Transform>();
+			_skinnedSpriteNodes = new List<Transform>();
 			_animatedNodes = new List<Transform>();
 			_nodesByInstanceId = new Dictionary<int, NodeId>();
+
+			InitializeSpriteRegistries();
 
 			_buffer = new GLTFBuffer();
 			_bufferId = new BufferId
@@ -309,6 +314,12 @@ namespace UnityGLTF
 			var gltfFile = File.CreateText(Path.Combine(path, fileName + ".gltf"));
 			_root.Serialize(gltfFile);
 
+			foreach(var sanim in _spritesheetAnimations){
+				var f = File.CreateText(Path.Combine(path, sanim.name + "-animations.json"));
+				f.Write(JsonUtility.ToJson(sanim, true));
+				f.Close();
+			}
+
 #if WINDOWS_UWP
 			gltfFile.Dispose();
 			binFile.Dispose();
@@ -354,10 +365,24 @@ namespace UnityGLTF
 			scene.Nodes = new List<NodeId>(rootObjTransforms.Length);
 			foreach (var transform in rootObjTransforms)
 			{
-        NodeId nodeid = ExportNode(transform);
+				NodeId nodeid = ExportNode(transform);
 				if( nodeid != null ) {
-          scene.Nodes.Add( nodeid );
-        }
+					scene.Nodes.Add( nodeid );
+				}
+
+					var probes = transform.GetComponentsInChildren<ReflectionProbe>();
+					bool hasIBL = (scene.Extensions != null && !scene.Extensions.ContainsKey(EXT_LightsImageBasedExtensionFactory.EXTENSION_NAME));
+					if (probes.Length > 0 && !hasIBL)
+					{
+							ExportIBL(probes[0], scene);
+							ExportMMPIBL(probes[0], scene);
+					}
+
+					if (probes.Length > 0 && hasIBL)
+					{
+							Debug.LogWarning("Multiple reflection probes detected, only one will be exported");
+					}
+				
 			}
 
 
@@ -366,6 +391,10 @@ namespace UnityGLTF
 			for (int i = 0; i < _skinnedNodes.Count; ++i)
 			{
 				ExportSkin(_skinnedNodes[i]);
+			}
+
+			for(int i = 0; i < _skinnedSpriteNodes.Count; ++i){
+				ExportSkinSprite(_skinnedSpriteNodes[i]);
 			}
 
 			_root.Scenes.Add(scene);
@@ -389,6 +418,12 @@ namespace UnityGLTF
 			var smr = nodeTransform.GetComponent<SkinnedMeshRenderer>();
 			return( smr != null && smr.rootBone != null );
 		}
+
+		private bool IsSkinnedSpriteNode( Transform nodeTransform ){
+			var renderer = nodeTransform.GetComponent<SpriteRenderer>();
+			var skin = nodeTransform.GetComponent<SpriteSkin>();
+			return renderer != null && skin != null && skin.rootBone != null;
+		}
 	
 		private bool IsLightNode( Transform nodeTransform ){
 			var light = nodeTransform.GetComponent<Light>();
@@ -401,8 +436,8 @@ namespace UnityGLTF
 
 		private NodeId ExportNode(Transform nodeTransform)
 		{
-
-      if( ! IsEnabledNode(nodeTransform) ) return null;
+			
+			if( ! IsEnabledNode(nodeTransform) ) return null;
 
 			var node = new Node();
 
@@ -418,23 +453,29 @@ namespace UnityGLTF
 
 			if(IsSkinnedNode(nodeTransform))
 			{
-				  _skinnedNodes.Add(nodeTransform);
+					_skinnedNodes.Add(nodeTransform);
+			}
+
+			if(IsSkinnedSpriteNode(nodeTransform)){
+				_skinnedSpriteNodes.Add(nodeTransform);
 			}
 
 			if( IsLightNode( nodeTransform) ){
-        node.AddChild( CreateLightNode( nodeTransform.GetComponent<Light>() ) );
+				node.AddChild( CreateLightNode( nodeTransform.GetComponent<Light>() ) );
 			}
 
 			// export camera attached to node
-  		// Create additional sub node to flip camera Z
+			// Create additional sub node to flip camera Z
 			Camera unityCamera = nodeTransform.GetComponent<Camera>();
 			if( unityCamera != null ){
-        node.AddChild( CreateCameraNode( unityCamera ) );
-      }
+				node.AddChild( CreateCameraNode( unityCamera ) );
+			}
 
 			// If object is on top of the selection, use global transform
 			bool useLocal = !Array.Exists(_rootTransforms, element => element == nodeTransform);
 			node.SetUnityTransform(nodeTransform, useLocal);
+
+			SetLayeredNode(ref node, nodeTransform);
 
 			var id = new NodeId
 			{
@@ -448,6 +489,7 @@ namespace UnityGLTF
 			// children that are primitives get put in a mesh
 			GameObject[] primitives, nonPrimitives;
 			FilterPrimitives(nodeTransform, out primitives, out nonPrimitives);
+
 			if (primitives.Length > 0)
 			{
 				var mesh = ExportMesh(nodeTransform.name, primitives);
@@ -462,20 +504,21 @@ namespace UnityGLTF
 				}
 			}
 
+			foreach(var primitive in primitives){
+				ExportSpritesheetAnimation(node, primitive);
+			}
 
 
-
-      foreach (var child in nonPrimitives)
-      {
-        NodeId nodeid = ExportNode(child.transform);
+			foreach (var child in nonPrimitives)
+			{
+				NodeId nodeid = ExportNode(child.transform);
 				if( nodeid != null ) {
-          node.AddChild( nodeid );
-        }
-      }
+					node.AddChild( nodeid );
+				}
+			}
 
 			return id;
 		}
-
 
 		private CameraId ExportCamera(Camera unityCamera)
 		{
@@ -628,6 +671,12 @@ namespace UnityGLTF
 				return gameObject.GetComponent<SkinnedMeshRenderer>().sharedMaterial;
 			}
 
+			SpriteRenderer spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+			if(spriteRenderer)
+			{
+				return _spriteMaterials[spriteRenderer.sprite.GetHashCode()];
+			}
+
 			return null;
 		}
 
@@ -643,6 +692,15 @@ namespace UnityGLTF
 				return gameObject.GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			}
 
+			SpriteRenderer spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+			if(spriteRenderer)
+			{
+
+				return new Material[]{_spriteMaterials[spriteRenderer.sprite.GetHashCode()]};
+				// return gameObject.GetComponent<SpriteRenderer>().sharedMaterials;
+
+			}
+
 			return null;
 		}
 
@@ -650,17 +708,17 @@ namespace UnityGLTF
 		private long AppendToBufferMultiplyOf4(long byteOffset, long byteLength)
 		{
 			
-		    var moduloOffset = byteLength % 4;
-		    if (moduloOffset > 0)
-		    {
+				var moduloOffset = byteLength % 4;
+				if (moduloOffset > 0)
+				{
 			for (int i = 0; i < (4 - moduloOffset); i++)
 			{
-			    _bufferWriter.Write((byte)0x00);
+					_bufferWriter.Write((byte)0x00);
 			}
 			byteLength = _bufferWriter.BaseStream.Position - byteOffset;
-		    }
+				}
 
-		    return byteLength;
+				return byteLength;
 		}
 
 

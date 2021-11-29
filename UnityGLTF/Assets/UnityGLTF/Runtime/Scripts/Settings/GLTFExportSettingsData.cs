@@ -19,6 +19,14 @@ public class GLTFExportSettingsData
 {
 
   [SerializeField]
+  private bool m_PreserveHierarchy;
+  public bool PreserveHierarchy
+  {
+    get { return m_PreserveHierarchy; }
+  }
+
+
+  [SerializeField]
   private GLTFExportMeshSettingsSerializable m_meshSettings;
   public GLTFExportMeshSettingsSerializable MeshSettings
   {
