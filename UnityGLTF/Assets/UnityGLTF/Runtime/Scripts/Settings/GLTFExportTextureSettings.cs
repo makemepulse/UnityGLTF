@@ -28,12 +28,21 @@ public class GLTFExportTextureSettings
   public bool Compress = false;
   public bool GenerateMipMap = false;
 
+  public bool ExportJPG = false;
+  /**
+  * Jpeg quality between 0 and 100
+  */
+  [Range(0, 100)]
+  public int Quality = 90;
+
   public bool Equals(GLTFExportTextureSettings x)
   {
     bool equals = resize == x.resize;
     equals = equals && flipY == x.flipY;
     equals = equals && Compress == x.Compress;
     equals = equals && GenerateMipMap == x.GenerateMipMap;
+    equals = equals && ExportJPG == x.ExportJPG;
+    equals = equals && Quality == x.Quality;
     return equals;
   }
 

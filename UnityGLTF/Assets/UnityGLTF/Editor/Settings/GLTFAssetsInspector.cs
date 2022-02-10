@@ -177,8 +177,7 @@ public class GLTFAssetsInspector : EditorWindow
 
       var so = new SerializedObject(binding);
       EditorGUILayout.ObjectField(texture, typeof(Texture2D), true);
-      EditorGUILayout.PropertyField(so.FindProperty("settings.Compress"), true);
-      EditorGUILayout.PropertyField(so.FindProperty("settings.GenerateMipMap"), true);
+      EditorGUILayout.PropertyField(so.FindProperty("settings"), new GUIContent("Export Settings"));
       so.ApplyModifiedProperties();
 
       GUILayout.Space(5);
