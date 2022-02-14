@@ -121,7 +121,7 @@ namespace UnityGLTF
 
         try
         {
-          var filePath = ConstructImageFilenamePath(source, outputPath);
+          var filePath = ConstructImageFilenamePath(source, outputPath, "png");
           string p = filePath + ext;
           File.WriteAllBytes(p, data);
         }

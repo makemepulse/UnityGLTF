@@ -98,7 +98,7 @@ namespace UnityGLTF
       exportTexture.ReadPixels(new Rect(0, 0, destRenderTexture.width, destRenderTexture.height), 0, 0);
       exportTexture.Apply();
 
-      var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath);
+      var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "png");
       File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
 
       RenderTexture.ReleaseTemporary(destRenderTexture);
@@ -129,8 +129,19 @@ namespace UnityGLTF
       exportTexture.ReadPixels(new Rect(0, 0, destRenderTexture.width, destRenderTexture.height), 0, 0);
       exportTexture.Apply();
 
-      var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath);
-      File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
+      GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
+      GLTFExportTextureSettings setting = reg.GetSettings(texture as Texture2D);
+
+      if( setting.ExportJPG ){
+        var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "jpg");
+        Debug.Log(finalFilenamePath);
+        File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToJPG(setting.Quality));
+      }
+      else {
+        var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "png");
+        Debug.Log(finalFilenamePath);
+        File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
+      }
 
 
       RenderTexture.ReleaseTemporary(destRenderTexture);
@@ -155,8 +166,22 @@ namespace UnityGLTF
       exportTexture.ReadPixels(new Rect(0, 0, destRenderTexture.width, destRenderTexture.height), 0, 0);
       exportTexture.Apply();
 
-      var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath);
-      File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
+
+      GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
+      GLTFExportTextureSettings setting = reg.GetSettings(texture as Texture2D);
+
+      
+      if( setting.ExportJPG ){
+        var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "jpg");
+        Debug.Log(finalFilenamePath);
+        File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToJPG(setting.Quality));
+      }
+      else {
+        var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "png");
+        Debug.Log(finalFilenamePath);
+        File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
+      }
+
 
       RenderTexture.ReleaseTemporary(destRenderTexture);
       // if (Application.isEditor)
@@ -170,7 +195,7 @@ namespace UnityGLTF
       return exportTexture;
     }
 
-    private string ConstructImageFilenamePath(Texture2D texture, string outputPath)
+    private string ConstructImageFilenamePath(Texture2D texture, string outputPath, string ext)
     {
       var imagePath = _exportOptions.TexturePathRetriever(texture);
       if (string.IsNullOrEmpty(imagePath))
@@ -185,7 +210,7 @@ namespace UnityGLTF
       }
       var file = new FileInfo(filenamePath);
       file.Directory.Create();
-      return Path.ChangeExtension(filenamePath, ".png");
+      return Path.ChangeExtension(filenamePath, "."+ext);
     }
 
 
@@ -295,10 +320,21 @@ namespace UnityGLTF
         imagePath = texture.name;
       }
 
-      var filenamePath = Path.ChangeExtension(imagePath, ".png");
+      GLTFTexturesRegistry reg = GLTFExportSettings.Defaults.info.TexturesRegistry;
+      GLTFExportTextureSettings setting = reg.GetSettings(texture as Texture2D);
+
+      string ext;
+      if( setting.ExportJPG ){
+        ext = ".jpg";
+      }
+      else {
+        ext = ".png";
+      }
+
+      var filenamePath = Path.ChangeExtension(imagePath, ext);
       if (!ExportFullPath)
       {
-        filenamePath = Path.ChangeExtension(texture.name, ".png");
+        filenamePath = Path.ChangeExtension(texture.name, ext);
       }
       image.Uri = Uri.EscapeUriString(filenamePath);
 

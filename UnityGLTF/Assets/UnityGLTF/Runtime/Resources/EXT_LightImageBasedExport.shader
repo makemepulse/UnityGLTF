@@ -85,6 +85,7 @@
                 float3 s = normalize(float3(1.0, uv * 2.0 - float2(1.0, 1.0)));
                 s = rotateVector(_Rotation, s);
                 s.x = -s.x;
+                s.z = -s.z;
 
                 half4 skyData = texCUBElod(_MainTex, float4(s, _MipLevel));
                 half3 skyColor = DecodeHDR (skyData, _MainTex_HDR);
