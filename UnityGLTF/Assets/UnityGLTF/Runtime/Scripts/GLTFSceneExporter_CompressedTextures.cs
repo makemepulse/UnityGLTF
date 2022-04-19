@@ -25,6 +25,7 @@ namespace UnityGLTF
         case TextureFormat.PVRTC_RGB2:
         case TextureFormat.PVRTC_RGB4:
         case TextureFormat.ETC_RGB4:
+        case TextureFormat.ASTC_8x8:
           return TextureFormat.RGB24;
         default:
           return TextureFormat.RGBA32;
@@ -70,6 +71,7 @@ namespace UnityGLTF
       // TODO: update with alpha or configurable maybe
       // ==========
       List<TextureFormat> compressFormats = new List<TextureFormat>();
+      compressFormats.Add(TextureFormat.ASTC_8x8);
       compressFormats.Add(TextureFormat.PVRTC_RGB4);
       compressFormats.Add(TextureFormat.DXT1);
       compressFormats.Add(TextureFormat.ETC_RGB4);
@@ -96,18 +98,27 @@ namespace UnityGLTF
 
         string ext = KTX.GetExt(targetFormat);
         TextureFormat fmt = Compressed_GetSourceFormat(tgt);
-        bool mip = setting.GenerateMipMap;
 
         TextureCompressedCacheData cache;
         bool validCache = reg.GetOrCreateCacheData(source, setting, tgt, out cache);
 
         if (!validCache)
         {
-          Texture2D exportTexture = new Texture2D(texture.width, texture.height, fmt, mip);
+          Texture2D exportTexture = new Texture2D(texture.width, texture.height, fmt, texture.mipmapCount > 1);
+          if(!texture.isReadable)
+            throw new SystemException("Texture not readable: " + texture.name);
           exportTexture.SetPixels32(texture.GetPixels32());
 
           FlipTextureVertically(exportTexture);
-          EditorUtility.CompressTexture(exportTexture, tgt, TextureCompressionQuality.Best);
+          try
+          {
+            EditorUtility.CompressTexture(exportTexture, tgt, TextureCompressionQuality.Normal);
+          }
+          catch (Exception e)
+          {
+            EditorUtility.ClearProgressBar();
+            throw e;
+          }
           exportTexture.Apply();
           // Write data
           data = KTX.Encode(exportTexture, exportTexture.format);

@@ -8,26 +8,17 @@ public class GLTFExportTextureSettings
 {
 
   // TODO
-  public enum Resize
-  {
-    None = 0,
-    Quart = 1,
-    Half = 2
-  }
-
-  // TODO
-  [HideInInspector]
-  [SerializeField]
-  public Resize resize = Resize.None;
-
-  // TODO
   [HideInInspector]
   [SerializeField]
   public bool flipY;
 
   public bool Compress = false;
-  public bool GenerateMipMap = false;
-
+  public bool ExportWebp = false;
+  /**
+  * Jpeg quality between -1 and 100
+  */
+  [Range(-1, 100)]
+  public int WebpQuality = 90;
   public bool ExportJPG = false;
   /**
   * Jpeg quality between 0 and 100
@@ -37,10 +28,10 @@ public class GLTFExportTextureSettings
 
   public bool Equals(GLTFExportTextureSettings x)
   {
-    bool equals = resize == x.resize;
-    equals = equals && flipY == x.flipY;
+    bool equals = flipY == x.flipY;
     equals = equals && Compress == x.Compress;
-    equals = equals && GenerateMipMap == x.GenerateMipMap;
+    equals = equals && ExportWebp == x.ExportWebp;
+    equals = equals && WebpQuality == x.WebpQuality;
     equals = equals && ExportJPG == x.ExportJPG;
     equals = equals && Quality == x.Quality;
     return equals;

@@ -66,8 +66,22 @@ public class GLTFAssetsInspector : EditorWindow
 
       foreach (var gameObject in gameObjects)
       {
-        EditorGUILayout.InspectorTitlebar(true, gameObject);
+
+        int ID = gameObject.GetInstanceID();
+        if (!foldStates.ContainsKey(ID))
+        {
+          foldStates.Add(ID, true);
+        }
+
+        bool foldState;
+        foldStates.TryGetValue(ID, out foldState);
+        foldState = EditorGUILayout.InspectorTitlebar(foldState, gameObject);
+        foldStates[ID] = foldState;
+        if (!foldState)
+          break;
+
         Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+
         for (int i = 0; i < renderers.Length; i++)
         {
           foreach (Material material in renderers[i].sharedMaterials)
@@ -88,6 +102,13 @@ public class GLTFAssetsInspector : EditorWindow
         textures.Add(texture);
       }
     }
+
+    GUILayout.Space(10);
+    
+    Rect rect = EditorGUILayout.GetControlRect(false, 2 );
+    rect.height = 2;
+    EditorGUI.DrawRect(rect, new Color ( 0.5f,0.5f,0.5f, 1 ) );
+    
     GUILayoutOption[] btnLayout = new GUILayoutOption[]{
       GUILayout.MaxWidth(150),
       GUILayout.MinHeight(50),
@@ -155,7 +176,7 @@ public class GLTFAssetsInspector : EditorWindow
     int ID = texture.GetInstanceID();
     if (!foldStates.ContainsKey(ID))
     {
-      foldStates.Add(ID, false);
+      foldStates.Add(ID, true);
     }
 
     bool foldState;
