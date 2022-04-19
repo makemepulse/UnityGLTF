@@ -45,7 +45,13 @@ namespace UnityGLTF
       light.LightName = probe.gameObject.name;
       light.Intensity = probe.intensity;
 
-      light.IrradianceCoefficients = GLTFIBLUtils.ExtractSHCoefficients(RenderSettings.ambientProbe);
+
+      var positions = new Vector3[]{ probe.transform.position };
+      var lightprobes = new UnityEngine.Rendering.SphericalHarmonicsL2[1];
+      var occlusionprobes = new Vector4[1];
+      LightProbes.CalculateInterpolatedLightAndOcclusionProbes(positions, lightprobes, occlusionprobes);
+      // light.IrradianceCoefficients = GLTFIBLUtils.ExtractSHCoefficients(RenderSettings.ambientProbe);
+      light.IrradianceCoefficients = GLTFIBLUtils.ExtractSHCoefficients(lightprobes[0]);
 
       light.SpecularImageSize = probe.texture.width;
 
@@ -68,7 +74,7 @@ namespace UnityGLTF
                 Quaternion.identity,
                 Quaternion.Euler(0.0f,  180f,      0.0f),
                 Quaternion.Euler(90.0f,   0f,    -90.0f),
-                Quaternion.Euler(-90.0f,     0f,     90.0f),
+                Quaternion.Euler(-90.0f,  0f,     90.0f),
                 Quaternion.Euler(0.0f,    90f,     0.0f),
                 Quaternion.Euler(0.0f,   -90f,     0.0f),
             };

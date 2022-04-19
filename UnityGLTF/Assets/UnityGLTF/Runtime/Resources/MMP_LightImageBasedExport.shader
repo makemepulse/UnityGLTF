@@ -91,7 +91,7 @@
                 float lod = floor(uv.y);
                 float3 decode = vecFromSplitOctant(uv.x, fmod(uv.y, 1.0));
                 decode.x = -decode.x;
-                decode.z = -decode.z;
+                // decode.z = -decode.z;
                 float4 skyData = texCUBElod(_MainTex, float4(decode, lod));
                 half3 skyColor = DecodeHDR(skyData, _MainTex_HDR);
                 return EncodeRGBE(skyColor.rgb);

@@ -182,6 +182,21 @@ namespace UnityGLTF
         File.WriteAllBytes(finalFilenamePath, exportTexture.EncodeToPNG());
       }
 
+      if(setting.ExportWebp){
+        var error = WebP.Error.Success;
+        var finalFilenamePath = ConstructImageFilenamePath(texture, outputPath, "webp");
+        Texture2D flipped = new Texture2D(exportTexture.width,exportTexture.height);
+        int xN = exportTexture.width;
+        int yN = exportTexture.height;
+        for(int i=0;i<xN;i++){
+          for(int j=0;j<yN;j++){
+            flipped.SetPixel(i, yN-j-1, exportTexture.GetPixel(i,j));
+          }
+        }
+        flipped.Apply();
+        Debug.Log(finalFilenamePath);
+        File.WriteAllBytes(finalFilenamePath, WebP.Texture2DExt.EncodeToWebP(flipped, setting.WebpQuality, out error));
+      }
 
       RenderTexture.ReleaseTemporary(destRenderTexture);
       // if (Application.isEditor)

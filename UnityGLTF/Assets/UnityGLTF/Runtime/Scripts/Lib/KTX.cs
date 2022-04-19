@@ -39,6 +39,7 @@ namespace UnityGLTF
           return 1f;
         case TextureFormat.PVRTC_RGB2:
         case TextureFormat.PVRTC_RGBA2:
+        case TextureFormat.ASTC_8x8:
           return 0.25f;
         default:
           return 0.5f;
@@ -57,9 +58,7 @@ namespace UnityGLTF
         // case TextureFormat.ASTC_4x4:
         // case TextureFormat.ASTC_5x5:
         // case TextureFormat.ASTC_6x6:
-        // case TextureFormat.ASTC_8x8:
         // case TextureFormat.ASTC_10x10:
-        //   return 128;
 
         case TextureFormat.PVRTC_RGBA4:
         case TextureFormat.PVRTC_RGB4:
@@ -67,6 +66,7 @@ namespace UnityGLTF
         case TextureFormat.PVRTC_RGBA2:
           return 32;
 
+        case TextureFormat.ASTC_8x8:
         case TextureFormat.DXT5:
           return 16;
 
@@ -75,15 +75,15 @@ namespace UnityGLTF
         case TextureFormat.ETC_RGB4:
           return 8;
 
-        default:
+      default:
           return 8;
-
-      }
 
     }
 
+  }
 
-    public static Dictionary<TextureFormat, string> Exts = new Dictionary<TextureFormat, string>()
+
+  public static Dictionary<TextureFormat, string> Exts = new Dictionary<TextureFormat, string>()
     {
       {TextureFormat.RGB24, ".jpg"},
       {TextureFormat.RGBA32, ".png"},
@@ -103,152 +103,151 @@ namespace UnityGLTF
     };
 
 
-    public static string GetExt(TextureFormat format)
+  public static string GetExt(TextureFormat format)
+  {
+    string output;
+    Exts.TryGetValue(format, out output);
+    output += ".ktx";
+    return output;
+  }
+
+
+  public static byte[] Encode(Texture2D texture, TextureFormat format)
+  {
+
+    byte[] textureData = texture.GetRawTextureData();
+
+    int glInternalFormat;
+    _GlInternal.TryGetValue(format, out glInternalFormat);
+
+    // texture info
+    int mipcount = texture.mipmapCount;
+    int width = texture.width;
+    int height = texture.height;
+    int tlen = (textureData.Length);
+
+    // setup data
+    int blockSize = GetBytesBlockSize(format);
+    int int32len = 4;
+    int dlen = 64 + tlen + mipcount * 4;
+    byte[] data = new byte[dlen];
+
+    int ptr = 0;
+    int size = 0;
+
+    // MAGIC
+    byte[] value = KTX_MAGIC;
+    size = KTX_MAGIC.Length;
+    Array.Copy(value, 0, data, ptr, value.Length);
+    ptr += size;
+
+    // endianness
+    value = BitConverter.GetBytes(0x04030201);
+    size = value.Length;
+    Array.Copy(value, 0, data, ptr, value.Length);
+    ptr += size;
+
+    // glType
+    value = new byte[4];
+    Array.Copy(value, 0, data, ptr, value.Length);
+    ptr += value.Length;
+
+    // glTypeSize
+    value = BitConverter.GetBytes((uint)1);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += value.Length;
+
+    // glFormat
+    value = new byte[4];
+    Array.Copy(value, 0, data, ptr, value.Length);
+    ptr += value.Length;
+
+    // glInternalFormat
+    value = BitConverter.GetBytes((uint)glInternalFormat);
+    Array.Copy(value, 0, data, ptr, value.Length);
+    ptr += value.Length;
+
+    // glBaseInternalFormat
+    // RGB	0x1907	 
+    // RGBA	0x1908
+    value = BitConverter.GetBytes((uint)0x1907);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+    // pixelWidth
+    value = BitConverter.GetBytes((uint)width);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+    // pixelHeight
+    value = BitConverter.GetBytes((uint)height);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+    // depth
+    // TODO
+    value = new byte[4];
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+
+    // numberOfArrayElements
+    // TODO
+    value = BitConverter.GetBytes((uint)1);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+
+    // numberOfFace
+    // TODO
+    value = BitConverter.GetBytes((uint)1);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+
+    // numberOfMipmapLevels
+    value = BitConverter.GetBytes((uint)mipcount);
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+
+    // bytesOfKeyValueData
+    value = new byte[4];
+    Array.Copy(value, 0, data, ptr, int32len);
+    ptr += int32len;
+
+
+    // textureData
+    int w = width;
+    int h = height;
+    // int isize = (w * h) / 2;
+    int isize = (int)((float)(w * h) * GetBPP(format));
+    isize = Mathf.Max(blockSize, isize);
+
+    int texptr = 0;
+    for (int i = 0; i < mipcount; i++)
     {
-      string output;
-      Exts.TryGetValue(format, out output);
-      output += ".ktx";
-      return output;
-    }
 
-
-    public static byte[] Encode(Texture2D texture, TextureFormat format)
-    {
-
-      byte[] textureData = texture.GetRawTextureData();
-
-      int glInternalFormat;
-      _GlInternal.TryGetValue(format, out glInternalFormat);
-
-      // texture info
-      int mipcount = texture.mipmapCount;
-      int width = texture.width;
-      int height = texture.height;
-      int tlen = (textureData.Length & ~3);
-
-      // setup data
-      int blockSize = GetBytesBlockSize(format);
-      int int32len = 4;
-      int dlen = 64 + tlen + mipcount * 4;
-      byte[] data = new byte[dlen];
-
-      int ptr = 0;
-      int size = 0;
-
-      // MAGIC
-      byte[] value = KTX_MAGIC;
-      size = KTX_MAGIC.Length;
-      Array.Copy(value, 0, data, ptr, value.Length);
-      ptr += size;
-
-      // endianness
-      value = BitConverter.GetBytes(0x04030201);
-      size = value.Length;
-      Array.Copy(value, 0, data, ptr, value.Length);
-      ptr += size;
-
-      // glType
-      value = new byte[4];
-      Array.Copy(value, 0, data, ptr, value.Length);
-      ptr += value.Length;
-
-      // glTypeSize
-      value = BitConverter.GetBytes((uint)1);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += value.Length;
-
-      // glFormat
-      value = new byte[4];
-      Array.Copy(value, 0, data, ptr, value.Length);
-      ptr += value.Length;
-
-      // glInternalFormat
-      // value = BitConverter.GetBytes((uint)setting.info.GetGlInternal(exportTexture.format));
-      value = BitConverter.GetBytes((uint)glInternalFormat);
-      Array.Copy(value, 0, data, ptr, value.Length);
-      ptr += value.Length;
-
-      // glBaseInternalFormat
-      // RGB	0x1907	 
-      // RGBA	0x1908
-      value = BitConverter.GetBytes((uint)0x1907);
-      Array.Copy(value, 0, data, ptr, int32len);
+      byte[] bisize = BitConverter.GetBytes((uint)isize);
+      // imageSize
+      Array.Copy(bisize, 0, data, ptr, int32len);
       ptr += int32len;
+      // data
+      Array.Copy(textureData, texptr, data, ptr, isize);
+      texptr += isize;
+      ptr += isize;
 
-      // pixelWidth
-      value = BitConverter.GetBytes((uint)width);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-      // pixelHeight
-      value = BitConverter.GetBytes((uint)height);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-      // depth
-      // TODO
-      value = new byte[4];
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-
-      // numberOfArrayElements
-      // TODO
-      value = BitConverter.GetBytes((uint)1);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-
-      // numberOfFace
-      // TODO
-      value = BitConverter.GetBytes((uint)1);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-
-      // numberOfMipmapLevels
-      value = BitConverter.GetBytes((uint)mipcount);
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-
-      // bytesOfKeyValueData
-      value = new byte[4];
-      Array.Copy(value, 0, data, ptr, int32len);
-      ptr += int32len;
-
-
-      // textureData
-      int w = width;
-      int h = height;
-      // int isize = (w * h) / 2;
-      int isize = (int)((float)(w * h) * GetBPP(format));
+      w = w >> 1;
+      h = h >> 1;
+      isize = (int)((float)(w * h) * GetBPP(format));
       isize = Mathf.Max(blockSize, isize);
 
-      int texptr = 0;
-      for (int i = 0; i < mipcount; i++)
-      {
-
-        byte[] bisize = BitConverter.GetBytes((uint)isize);
-        // imageSize
-        Array.Copy(bisize, 0, data, ptr, int32len);
-        ptr += int32len;
-        // data
-        Array.Copy(textureData, texptr, data, ptr, isize);
-        texptr += isize;
-        ptr += isize & ~3;
-
-        w = w >> 1;
-        h = h >> 1;
-        isize = (int)((float)(w * h) * GetBPP(format));
-        isize = Mathf.Max(blockSize, isize);
-
-      }
-
-      return data;
-
     }
 
+    return data;
+
   }
+
+}
 
 }
